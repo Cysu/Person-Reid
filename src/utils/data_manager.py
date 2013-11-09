@@ -11,8 +11,8 @@ from scipy.io import loadmat, savemat
 class DataManager(object):
     """Data I/O manager (DataManager)
 
-    Provide input and output functions for person re-identification data. The
-    data file should follow the unified format that described in README.md.
+    The DataManager class provides input and output functions for data. The data 
+    file should follow the unified format that described in README.md.
     """
 
     def __init__(self, verbose=False):
@@ -36,7 +36,7 @@ class DataManager(object):
         # TODO: Handle errors
         self.data = loadmat(fpath)['data']
 
-        self.n_groups = self.data.shape[0]
+        self.n_groups = self.data.size
 
     def get_pedes(self, i):
         """Get the pedestrian data for one group
@@ -51,7 +51,7 @@ class DataManager(object):
 
         # TODO: Handle errors
 
-        return self.data[i]['pedes']
+        return self.data[i][0]['pedes']
 
     def _log(self, msg):
         """Log a message to the screen if verbose mode selected.
