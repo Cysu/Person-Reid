@@ -115,7 +115,6 @@ class MainWindow(QtGui.QMainWindow):
         self.setWindowTitle("Person Re-id Dataset Viewer")
         self.setCentralWidget(self.gallery)
         self.showMaximized()
-        self.show()
 
     def open(self):
         fpath = QtGui.QFileDialog.getOpenFileName(self, "Open File",
@@ -142,6 +141,7 @@ class MainWindow(QtGui.QMainWindow):
 def main():
     app = QtGui.QApplication(sys.argv)
     main_window = MainWindow()
+    main_window.show()
     sys.exit(app.exec_())
 
 
