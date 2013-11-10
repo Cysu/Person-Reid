@@ -16,7 +16,7 @@ class DataManager(object):
     """
 
     def __init__(self, verbose=False):
-        """Initialize the DataManager class.
+        """Initialize the DataManager
 
         Args:
             verbose: A switch to whether log some information to the screen
@@ -25,7 +25,7 @@ class DataManager(object):
         self.verbose = verbose
 
     def read(self, fpath):
-        """Read data from file.
+        """Read data from file
 
         Args:
             fpath: The path to the data file
@@ -38,11 +38,16 @@ class DataManager(object):
 
         self.n_groups = self.data.size
 
-    def get_pedes(self, i):
+    def n_groups(self):
+        """Get the number of cameras-settings groups"""
+
+        return self.data.shape[0]
+
+    def get_pedes(self, index):
         """Get the pedestrian data for one group
 
         Args:
-            i: The group index
+            index: The group index
 
         Returns:
             A m×v numpy matrix `P`, `P(i,j)` is the data array for the `i`-th
@@ -51,10 +56,10 @@ class DataManager(object):
 
         # TODO: Handle errors
 
-        return self.data[i][0]['pedes']
+        return self.data[index, 0]['pedes']
 
     def _log(self, msg):
-        """Log a message to the screen if verbose mode selected.
+        """Log a message to the screen if verbose mode selected
 
         Args:
             msg: A message string

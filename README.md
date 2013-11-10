@@ -1,6 +1,6 @@
 # Person-Reid #
 
-Research projects on person re-identification
+Research projects of person re-identification
 
 
 ## Definition ##
