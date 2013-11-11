@@ -63,6 +63,11 @@ class DataTreeModel(QtCore.QAbstractItemModel):
 
         return self.createIndex(p.get_parent().get_child_index(p), 0, p)
 
+    def headerData(self, section, orientation, role):
+        if orientation != Qt.Horizontal or role != Qt.DisplayRole: 
+            return QVariant()
+
+        return self._root.get_data(section)
 
     def data(self, index, role):
         if not index.isValid() or role != Qt.DisplayRole: return QVariant()
