@@ -31,7 +31,7 @@ class ImagesGallery(QtGui.QWidget):
             images: An array of images. Each image is a numpy matrix.
         """
 
-        nimages = images.shape[0]
+        nimages = images.shape[1]
         cur_nwidgets = len(self.subwidgets)
 
         layout = self.layout()
@@ -50,7 +50,7 @@ class ImagesGallery(QtGui.QWidget):
             self.subwidgets = self.subwidgets[0:nimages]
 
         for i, x in enumerate(self.subwidgets):
-            qimg = array2qimage(images[i])
+            qimg = array2qimage(images[0, i])
             x.setPixmap(QtGui.QPixmap.fromImage(qimg))
 
     def _create_ui(self):
@@ -97,8 +97,16 @@ class PedesGallery(QtGui.QWidget):
             self.subwidgets = self.subwidgets[0:nviews]
 
         for i, x in enumerate(self.subwidgets):
-            x.show_images(np.squeeze(pedes[i]))
+            x.show_images(pedes[i])
 
+    def clear(self):
+        layout = self.layout()
+
+        for x in self.subwidgets:
+            layout.removeWidget(x)
+            x.deleteLater()
+
+        self.subwidgets = []
 
     def _create_ui(self):
         self.setLayout(QtGui.QVBoxLayout())
@@ -127,12 +135,26 @@ class MainWindow(QtGui.QMainWindow):
         # TODO: Handle errors
         self._dm.read(str(fpath))  # Convert QString into Python String
 
+        # TODO: Check if we should manually delete it
         self._tree_dock = QtGui.QTreeView(self._dock)
         self._tree_dock.setModel(DataTreeModel(self._dm, self._tree_dock))
         self._tree_dock.setColumnWidth(0, 200)
         self._tree_dock.setColumnWidth(1, 100)
+        self._tree_dock.doubleClicked[QtCore.QModelIndex].connect(self.display)
 
         self._dock.setWidget(self._tree_dock)
+
+        self._gallery_panel.clear()
+
+    def display(self, index):
+        gid = index.parent().row()
+        pid = index.row()
+
+        if gid >= 0 and pid >= 0:
+            pedes = self._dm.get_pedes(gid)
+            pedes = pedes[pid, :]
+
+            self._gallery_panel.show_pedes(pedes)
 
     def _set_codec(self, codec_name):
         codec = QtCore.QTextCodec.codecForName(codec_name)
