@@ -127,8 +127,10 @@ class MainWindow(QtGui.QMainWindow):
         # TODO: Handle errors
         self._dm.read(str(fpath))  # Convert QString into Python String
 
-        self._tree_dock = QtGui.QTreeView()
+        self._tree_dock = QtGui.QTreeView(self._dock)
         self._tree_dock.setModel(DataTreeModel(self._dm, self._tree_dock))
+        self._tree_dock.setColumnWidth(0, 200)
+        self._tree_dock.setColumnWidth(1, 100)
 
         self._dock.setWidget(self._tree_dock)
 
@@ -148,6 +150,7 @@ class MainWindow(QtGui.QMainWindow):
         self._dock = QtGui.QDockWidget(self)
         self._dock.setAllowedAreas(Qt.LeftDockWidgetArea)
         self._dock.setFeatures(QtGui.QDockWidget.NoDockWidgetFeatures)
+        self._dock.setMinimumWidth(350)
 
         self.addDockWidget(Qt.LeftDockWidgetArea, self._dock)
 
