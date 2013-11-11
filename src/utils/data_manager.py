@@ -22,7 +22,7 @@ class DataManager(object):
             verbose: A switch to whether log some information to the screen
         """
 
-        self.verbose = verbose
+        self._verbose = verbose
 
     def read(self, fpath):
         """Read data from file
@@ -34,14 +34,12 @@ class DataManager(object):
         self._log("Reading {0} ...".format(fpath))
 
         # TODO: Handle errors
-        self.data = loadmat(fpath)['data']
-
-        self.n_groups = self.data.size
+        self._data = loadmat(fpath)['data']
 
     def n_groups(self):
         """Get the number of cameras-settings groups"""
 
-        return self.data.shape[0]
+        return self._data.shape[0]
 
     def get_pedes(self, index):
         """Get the pedestrian data for one group
@@ -56,7 +54,7 @@ class DataManager(object):
 
         # TODO: Handle errors
 
-        return self.data[index, 0]['pedes']
+        return self._data[index, 0]['pedes']
 
     def _log(self, msg):
         """Log a message to the screen if verbose mode selected
@@ -65,4 +63,4 @@ class DataManager(object):
             msg: A message string
         """
 
-        if self.verbose: print msg
+        if self._verbose: print msg

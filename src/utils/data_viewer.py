@@ -6,9 +6,11 @@ import os
 import numpy as np
 
 from PyQt4 import QtGui, QtCore
+from PyQt4.QtCore import Qt
 from qimage2ndarray import array2qimage
 
 from data_manager import DataManager
+from data_tree_model import DataTreeModel
 
 
 class ImagesGallery(QtGui.QWidget):
@@ -107,13 +109,15 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
 
-        self.dm = DataManager(verbose=True)
+        self._set_codec("UTF-8")
+
+        self._dm = DataManager(verbose=True)
 
         self._create_panels()
+        self._create_docks()
         self._create_menus()
 
         self.setWindowTitle("Person Re-id Dataset Viewer")
-        self.setCentralWidget(self.gallery)
         self.showMaximized()
 
     def open(self):
@@ -121,10 +125,31 @@ class MainWindow(QtGui.QMainWindow):
             QtCore.QDir.homePath(), "Matlab File (*.mat)")
 
         # TODO: Handle errors
-        self.dm.read(str(fpath))  # Convert QString into Python String
+        self._dm.read(str(fpath))  # Convert QString into Python String
+
+        self._tree_dock = QtGui.QTreeView()
+        self._tree_dock.setModel(DataTreeModel(self._dm))
+
+        self._dock.setWidget(self._tree_dock)
+
+    def _set_codec(self, codec_name):
+        codec = QtCore.QTextCodec.codecForName(codec_name)
+        QtCore.QTextCodec.setCodecForLocale(codec)
+        QtCore.QTextCodec.setCodecForCStrings(codec)
+        QtCore.QTextCodec.setCodecForTr(codec)
 
     def _create_panels(self):
-        self.gallery = PedesGallery(self)
+        self._gallery_panel = PedesGallery(self)
+
+        self.setCentralWidget(self._gallery_panel)
+
+    def _create_docks(self):
+
+        self._dock = QtGui.QDockWidget(self)
+        self._dock.setAllowedAreas(Qt.LeftDockWidgetArea)
+        self._dock.setFeatures(QtGui.QDockWidget.NoDockWidgetFeatures)
+
+        self.addDockWidget(Qt.LeftDockWidgetArea, self._dock)
 
     def _create_menus(self):
         # Actions
