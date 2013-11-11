@@ -128,7 +128,7 @@ class MainWindow(QtGui.QMainWindow):
         self._dm.read(str(fpath))  # Convert QString into Python String
 
         self._tree_dock = QtGui.QTreeView()
-        self._tree_dock.setModel(DataTreeModel(self._dm))
+        self._tree_dock.setModel(DataTreeModel(self._dm, self._tree_dock))
 
         self._dock.setWidget(self._tree_dock)
 
