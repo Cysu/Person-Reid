@@ -121,6 +121,10 @@ class MainWindow(QtGui.QMainWindow):
 
         self._dm = DataManager(verbose=True)
 
+        self._cur_pid = None
+        self._cur_pedes = None
+        self._cur_index = None
+
         self._create_panels()
         self._create_docks()
         self._create_menus()
@@ -150,11 +154,49 @@ class MainWindow(QtGui.QMainWindow):
         gid = index.parent().row()
         pid = index.row()
 
-        if gid >= 0 and pid >= 0:
+        if gid >= 0 and pid >= 0:  # gid is -1 when double click a group
             pedes = self._dm.get_pedes(gid)
-            pedes = pedes[pid, :]
 
-            self._gallery_panel.show_pedes(pedes)
+            self._cur_pid = pid
+            self._cur_pedes = pedes
+            self._cur_index = index
+
+            self._gallery_panel.show_pedes(pedes[pid, :])
+        else:
+            self._cur_pid = None
+            self._cur_pedes = None
+            self._cur_index = None
+
+
+    def next_pedes(self):
+        if self._cur_pedes is None or self._cur_pid is None: return
+
+        if self._cur_pid + 1 >= self._cur_pedes.shape[0]:
+            msg = QtGui.QMessageBox()
+            msg.setText("Reach the end of the group")
+            msg.exec_()
+        else:
+            self._cur_pid += 1
+            self._gallery_panel.show_pedes(self._cur_pedes[self._cur_pid, :])
+
+            next_index = self._cur_index.sibling(self._cur_pid, 0)
+            self._tree_dock.setCurrentIndex(next_index)
+            self._cur_index = next_index
+
+    def prev_pedes(self):
+        if self._cur_pedes is None or self._cur_pid is None: return
+
+        if self._cur_pid -1 < 0:
+            msg = QtGui.QMessageBox()
+            msg.setText("Reach the begining of the group")
+            msg.exec_()
+        else:
+            self._cur_pid -= 1
+            self._gallery_panel.show_pedes(self._cur_pedes[self._cur_pid, :])
+            
+            prev_index = self._cur_index.sibling(self._cur_pid, 0)
+            self._tree_dock.setCurrentIndex(prev_index)
+            self._cur_index = prev_index
 
     def _set_codec(self, codec_name):
         codec = QtCore.QTextCodec.codecForName(codec_name)
@@ -182,18 +224,28 @@ class MainWindow(QtGui.QMainWindow):
         open_act.setShortcut(QtGui.QKeySequence(QtGui.QKeySequence.Open))
         open_act.triggered.connect(self.open)
 
+        next_pedes_act = QtGui.QAction("Next Pedestrian", self)
+        next_pedes_act.setShortcut(QtGui.QKeySequence(QtGui.QKeySequence.Forward))
+        next_pedes_act.triggered.connect(self.next_pedes)
+
+        prev_pedes_act = QtGui.QAction("Prev Pedestrian", self)
+        prev_pedes_act.setShortcut(QtGui.QKeySequence(QtGui.QKeySequence.Back))
+        prev_pedes_act.triggered.connect(self.prev_pedes)
+
         # Menu Bar
         menubar = self.menuBar()
         fileMenu = menubar.addMenu("&File")
         fileMenu.addAction(open_act)
 
+        # Tool Bar
+        toolbar = self.addToolBar("Toolbar")
+        toolbar.addAction(next_pedes_act)
+        toolbar.addAction(prev_pedes_act)
 
-def main():
+
+if __name__ == '__main__':
+
     app = QtGui.QApplication(sys.argv)
     main_window = MainWindow()
     main_window.show()
     sys.exit(app.exec_())
-
-
-if __name__ == '__main__':
-    main()
