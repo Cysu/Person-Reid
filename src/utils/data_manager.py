@@ -37,6 +37,21 @@ class DataManager(object):
 
         return self._data.shape[0]
 
+    def n_images(self, gid, pid):
+        """Get the number of images in each view of a pedestrian
+
+        Args:
+            gid: The group index
+            pid: The pedestrian index
+
+        Returns:
+            A list of integers represents the number of images in each view.
+        """
+
+        views = self._data[gid, 0]['pedes'][pid, :]
+        
+        return [v.shape[1] for v in views]
+
     def get_pedes(self, index):
         """Get the pedestrian data for one group
 

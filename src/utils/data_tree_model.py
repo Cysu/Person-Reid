@@ -36,8 +36,10 @@ class DataTreeModel(QtCore.QAbstractItemModel):
 
             # Pedestrian nodes
             for pid in xrange(P.shape[0]):
+                n_images = data_manager.n_images(gid, pid)
+
                 pdata = [QVariant("Pedestrian {0}".format(pid)), 
-                         QVariant("")]
+                         QVariant(' + '.join(map(str, n_images)))]
                 pnode = DataTreeNode(pdata, gnode)
 
                 gnode.add_child(pnode)
