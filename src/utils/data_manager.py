@@ -1,11 +1,7 @@
 #! /usr/bin/python2
 # -*- coding: utf-8 -*-
 
-import sys
-import os
-import numpy as np
-
-from scipy.io import loadmat, savemat
+from scipy.io import loadmat
 
 
 class DataManager(object):

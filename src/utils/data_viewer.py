@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import os
-import numpy as np
 
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
@@ -11,6 +9,8 @@ from qimage2ndarray import array2qimage
 
 from data_manager import DataManager
 from data_tree_model import DataTreeModel
+
+from gui_flow_layout import FlowLayout
 
 
 class ImagesGallery(QtGui.QWidget):
@@ -54,7 +54,7 @@ class ImagesGallery(QtGui.QWidget):
             x.setPixmap(QtGui.QPixmap.fromImage(qimg))
 
     def _create_ui(self):
-        self.setLayout(QtGui.QHBoxLayout())
+        self.setLayout(FlowLayout())
         self.subwidgets = []
 
 

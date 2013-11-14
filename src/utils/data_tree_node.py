@@ -1,9 +1,6 @@
 #! /usr/bin/python2
 # -*- coding: utf-8 -*-
 
-from PyQt4 import QtGui, QtCore
-
-
 class DataTreeNode(object):
     """Node of data in tree model (DataTreeNode)
 

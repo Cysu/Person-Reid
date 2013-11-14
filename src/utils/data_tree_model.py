@@ -1,9 +1,7 @@
 #! /usr/bin/python2
 # -*- coding: utf-8 -*-
 
-import numpy as np
-
-from PyQt4 import QtGui, QtCore
+from PyQt4 import QtCore
 from PyQt4.QtCore import QVariant, QModelIndex, Qt
 
 from data_tree_node import DataTreeNode
