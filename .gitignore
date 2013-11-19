@@ -39,4 +39,4 @@ nosetests.xml
 .DS_Store
 
 # Project specific
-data/
+*.mat
