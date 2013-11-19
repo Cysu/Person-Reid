@@ -1,4 +1,4 @@
-#! /usr/bin/python2
+#!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
 import sys
@@ -135,6 +135,8 @@ class MainWindow(QtGui.QMainWindow):
     def open(self):
         fpath = QtGui.QFileDialog.getOpenFileName(self, "Open File",
             QtCore.QDir.homePath(), "Matlab File (*.mat)")
+
+        if fpath.isEmpty(): return
 
         # TODO: Handle errors
         self._dm.read(str(fpath))  # Convert QString into Python String
