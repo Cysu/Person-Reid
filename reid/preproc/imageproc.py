@@ -2,24 +2,30 @@
 # -*- coding: utf-8 -*-
 
 import numpy
-import skimage.color as skicolor
+
+from skimage.color import rgb2lab
+from sklearn.preprocessing import MinMaxScaler, Binarizer
 
 
-def img2vec(image):
+def subtract_luminance(rgbimg):
 
-    if image.ndim == 3:
-        image = skicolor.rgb2lab(image)
-        image = image.swapaxes(0, 2).swapaxes(1, 2)
+    labimg = rgb2lab(rgbimg)
 
-    return image.flatten()
+    mean_luminance = numpy.mean(labimg[:,:,0])
+    labimg[:,:,0] -= mean_luminance
 
-def imglist2mat(imagelist):
+    return labimg
 
-    if imagelist[0].ndim == 3:
-        imagelist = numpy.asarray(map(skicolor.rgb2lab, imagelist))
-        imagelist = imagelist.swapaxes(1, 3).swapaxes(2, 3)
-    else:
-        imagelist = numpy.asarray(imagelist)
+def scale_per_channel(img, scale_range):
 
-    return numpy.asarray(map(lambda x: x.flatten(), imagelist))
+    scaler = MinMaxScaler(scale_range, copy=False)
+    return scaler.fit_transform(img)
 
+def binarize(img, threshold):
+
+    binarizer = Binarizer(threshold, copy=False)
+    return binarizer.fit_transform(img)
+
+def images2mat(images):
+    
+    return numpy.asarray(map(lambda x: x.flatten(), images))
