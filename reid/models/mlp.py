@@ -19,7 +19,7 @@ class MultiLayerPerceptron(object):
         outputs = []
 
         for layer in self._layers:
-            x = layer.get_output(x)
+            x = layer.get_outputs(x)
             outputs.append(x)
 
         return outputs
@@ -28,7 +28,8 @@ class MultiLayerPerceptron(object):
 
         y = self.get_outputs(x)[-1]
 
-        cost = T.mean(T.sqrt(T.sum((y - target) ** 2, axis=1)))
+        # cost = T.mean(T.sqrt(T.sum((y - target) ** 2, axis=1)))
+        cost = T.nnet.binary_crossentropy(y, target).mean()
 
         return cost
 
@@ -44,7 +45,7 @@ class MultiLayerPerceptron(object):
 
     def get_error(self, x, target):
 
-        y = self.out_outputs(x)[-1]
+        y = self.get_outputs(x)[-1]
 
         error = T.mean(T.sqrt(T.sum((y - target) ** 2, axis=1)))
 

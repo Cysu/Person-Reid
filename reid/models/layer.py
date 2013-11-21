@@ -15,8 +15,7 @@ class Layer(object):
         init_W = numpy.asarray(numpy_rng.uniform(
             low=-4 * numpy.sqrt(6.0 / (input_size + output_size)),
             high=4 * numpy.sqrt(6.0 / (input_size + output_size)),
-            size=(input_size, output_size),
-            dtype=theano.config.floatX))
+            size=(input_size, output_size)), dtype=theano.config.floatX)
 
         self.W = theano.shared(value=init_W, name='W', borrow=True)
 

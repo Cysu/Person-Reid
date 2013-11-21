@@ -38,7 +38,7 @@ class Datasets(object):
 
         return self.train_x.get_value(borrow=True).shape[0]
 
-    def _create_shared(x):
+    def _create_shared(self, x):
         
         return theano.shared(numpy.asarray(x,
             dtype=theano.config.floatX), borrow=True)

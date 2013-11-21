@@ -1,8 +1,17 @@
 #!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
-from reid.datasets import loader
+import numpy
+import theano.tensor as T
+
 from reid.preproc import imageproc
+from reid.datasets import loader
+from reid.datasets.datasets import Datasets
+from reid.models.mlp import MultiLayerPerceptron as Mlp
+from reid.models.layer import Layer
+
+import reid.optimization.sgd as sgd
+
 
 if __name__ == '__main__':
 
@@ -28,4 +37,19 @@ if __name__ == '__main__':
         parses[i] = parse
 
     parses = imageproc.images2mat(parses)
+
+    # Prepare the datasets
+    
+    datasets = Datasets(images, parses)
+    datasets.split(train_ratio=0.5, valid_ratio=0.3)
+
+    # Build model
+
+    numpy_rng = numpy.random.RandomState(999987)
+    layers = [Layer(numpy_rng, 38400, 1024, T.nnet.sigmoid),
+              Layer(numpy_rng, 1024, 12800, T.nnet.sigmoid)]
+
+    model = Mlp(layers)
+
+    sgd.train(model, datasets)
 
