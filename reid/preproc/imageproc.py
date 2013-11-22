@@ -8,7 +8,6 @@ from sklearn.preprocessing import MinMaxScaler, Binarizer
 
 
 def subtract_luminance(rgbimg):
-
     labimg = rgb2lab(rgbimg)
 
     mean_luminance = numpy.mean(labimg[:,:,0])
@@ -17,15 +16,19 @@ def subtract_luminance(rgbimg):
     return labimg
 
 def scale_per_channel(img, scale_range):
-
     scaler = MinMaxScaler(scale_range, copy=False)
-    return scaler.fit_transform(img)
+
+    h, w, c = img.shape
+
+    img = img.reshape(h*w, c)
+    img = scaler.fit_transform(img)
+    img = img.reshape(h, w, c)
+
+    return img
 
 def binarize(img, threshold):
-
     binarizer = Binarizer(threshold, copy=False)
     return binarizer.fit_transform(img)
 
 def images2mat(images):
-    
-    return numpy.asarray(map(lambda x: x.flatten(), images))
+    return numpy.asarray(map(lambda x: x.ravel(), images))
