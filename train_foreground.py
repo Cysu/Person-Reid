@@ -10,6 +10,7 @@ from reid.datasets.datasets import Datasets
 from reid.models.mlp import MultiLayerPerceptron as Mlp
 from reid.models.layer import Layer
 
+import reid.costs as costs
 import reid.optimization.sgd as sgd
 
 
@@ -49,7 +50,9 @@ if __name__ == '__main__':
     layers = [Layer(numpy_rng, 38400, 1024, T.nnet.sigmoid),
               Layer(numpy_rng, 1024, 12800, T.nnet.sigmoid)]
 
-    model = Mlp(layers)
+    model = Mlp(layers,
+                cost_func=costs.MeanBinaryCrossEntropy,
+                error_func=costs.MeanBinaryCrossEntropy)
 
     sgd.train(model, datasets)
 

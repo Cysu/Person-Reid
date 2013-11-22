@@ -23,8 +23,7 @@ def train(model, datasets,
     y = T.matrix('y') # corresponding targets
     i = T.lscalar('i') # batch index
 
-    cost = model.get_cost(x, y)
-    updates = model.get_updates(cost, learning_rate)
+    cost, updates = model.get_cost_updates(x, y, learning_rate)
     error = model.get_error(x, y)
 
     train_func = theano.function(
