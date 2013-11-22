@@ -1,14 +1,16 @@
 #!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
-import theano.tensor as T
+from neural_net import NeuralNet
 
 
-class MultiLayerPerceptron(object):
+class MultiLayerPerceptron(NeuralNet):
 
-    def __init__(self, layers):
+    def __init__(self, layers, cost_func, error_func):
 
         self._layers = layers
+        self._cost_func = cost_func
+        self._error_func = error_func
 
         self.params = []
         for layer in layers:
@@ -23,30 +25,3 @@ class MultiLayerPerceptron(object):
             outputs.append(x)
 
         return outputs
-
-    def get_cost(self, x, target):
-
-        y = self.get_outputs(x)[-1]
-
-        # cost = T.mean(T.sqrt(T.sum((y - target) ** 2, axis=1)))
-        cost = T.nnet.binary_crossentropy(y, target).mean()
-
-        return cost
-
-    def get_updates(self, cost, learning_rate):
-
-        grads = T.grad(cost, self.params)
-
-        updates = []
-        for p, g in zip(self.params, grads):
-            updates.append((p, p - learning_rate * g))
-
-        return updates
-
-    def get_error(self, x, target):
-
-        y = self.get_outputs(x)[-1]
-
-        error = T.mean(T.sqrt(T.sum((y - target) ** 2, axis=1)))
-
-        return error
