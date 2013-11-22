@@ -40,3 +40,4 @@ nosetests.xml
 
 # Project specific
 *.mat
+*.pkl

@@ -34,4 +34,4 @@ class Layer(NeuralNet):
 
         z = T.dot(x, self.W) + self.b
 
-        return z if self._active_func is None else self._active_func(z)
+        return [z] if self._active_func is None else [self._active_func(z)]

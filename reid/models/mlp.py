@@ -21,7 +21,8 @@ class MultiLayerPerceptron(NeuralNet):
         outputs = []
 
         for layer in self._layers:
-            x = layer.get_outputs(x)
-            outputs.append(x)
+            y = layer.get_outputs(x)
+            outputs.extend(y)
+            x = y[-1]
 
         return outputs
