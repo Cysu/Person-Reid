@@ -1,27 +1,23 @@
 #!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
-import sys
 import cPickle
 import numpy
 import theano
 import theano.tensor as T
 
+import reid.costs as costs
+import reid.optimization.sgd as sgd
 from reid.preproc import imageproc
-from reid.datasets import loader
 from reid.datasets.datasets import Datasets
 from reid.models.mlp import MultiLayerPerceptron as Mlp
 from reid.models.layer import Layer
-
-import reid.costs as costs
-import reid.optimization.sgd as sgd
-
-from PyQt4 import QtGui
-from reid.utils.gui_images_gallery import ImagesGallery
+from reid.utils.data_manager import DataLoader, DataSaver
 
 
 _cached_datasets = 'cache/foreground_datasets.pkl'
 _cached_model = 'cache/foreground_model.pkl'
+_cached_result = 'cache/foreground_result.mat'
 
 
 def _prepare_data(load_from_cache=False, save_to_cache=False):
@@ -32,11 +28,11 @@ def _prepare_data(load_from_cache=False, save_to_cache=False):
     else:
         # Setup data files
 
-        image_filename = 'data/parse/cuhk_large_labeled_subsampled.mat'
-        parse_filename = 'data/parse/cuhk_large_labeled_subsampled_parse.mat'
+        image_data = DataLoader('data/parse/cuhk_large_labeled_subsampled.mat')
+        parse_data = DataLoader('data/parse/cuhk_large_labeled_subsampled_parse.mat')
 
-        images = loader.get_images_list(image_filename)
-        parses = loader.get_images_list(parse_filename)
+        images = image_data.get_all_images()
+        parses = parse_data.get_all_images()
 
         # Pre-processing
 
@@ -88,96 +84,45 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
 
     return model
 
-def _view_result(model, datasets):
-
-    class Widget(QtGui.QWidget):
-
-        def __init__(self, result_func, datasets, parent=None):
-            super(Widget, self).__init__(parent)
-
-            self._result_func = result_func
-            self._datasets = datasets
-
-            self._cur_index = -1
-
-            self.setWindowTitle("Result Viewer")
-            self.resize(800, 500)
-
-            self._create_ui()
-            self._move_to_center()
-            
-        def next_sample(self):
-            if self._cur_index + 1 < datasets.test_y.get_value(borrow=True).shape[0]:
-                self._cur_index += 1
-                self._show_sample(self._cur_index)
-
-        def prev_sample(self):
-            if self._cur_index - 1 >= 0:
-                self._cur_index -= 1
-                self._show_sample(self._cur_index)
-
-        def _show_sample(self, index):
-
-            x = self._datasets.test_x.get_value(borrow=True)[index, :]
-            y = self._result_func(x)
-            target = self._datasets.test_y.get_value(borrow=True)[index, :]
-
-            y = numpy.int8(y * 255).reshape(160, 80)
-            target = numpy.int8(target * 255).reshape(160, 80)
-
-            images = numpy.asarray([[y], [target]]).reshape(1,2,160,80)
-
-            self._gallery.show_images(images)
-
-        def _create_ui(self):
-
-            # Tool Bar
-            self._toolbar = QtGui.QToolBar()
-
-            next_act = QtGui.QAction("Next", self)
-            next_act.setShortcut(QtGui.QKeySequence(QtGui.QKeySequence.Forward))
-            next_act.triggered.connect(self.next_sample)
-
-            prev_act = QtGui.QAction("Prev", self)
-            prev_act.setShortcut(QtGui.QKeySequence(QtGui.QKeySequence.Back))
-            prev_act.triggered.connect(self.prev_sample)
-
-            self._toolbar.addAction(next_act)
-            self._toolbar.addAction(prev_act)
-
-            # Images Gallery
-            self._gallery = ImagesGallery()
-
-            # Overall Layout
-            layout = QtGui.QVBoxLayout()
-            layout.addWidget(self._toolbar)
-            layout.addWidget(self._gallery)
-
-            self.setLayout(layout)
-
-        def _move_to_center(self):
-
-            fg = self.frameGeometry()
-            cp = QtGui.QDesktopWidget().availableGeometry().center()
-            fg.moveCenter(cp)
-            self.move(fg.topLeft())
-
+def _generate_result(model, datasets):
+    # For convenience, we will save the result in our data format.
+    # Regard train, valid, and test sets as three groups.
+    # Each pedestrian only has one view, containing output and target images.
 
     x = T.vector('x')
     y = model.get_outputs(x)[-1]
+    output_func = theano.function(inputs=[x], outputs=y)
 
-    result_func = theano.function(inputs=[x], outputs=y)
+    data = DataSaver()
+    
+    def add(X, Y):
+        m = X.shape[0]
+        gid = data.add_group(m, 1)
 
-    app = QtGui.QApplication(sys.argv)
-    widget = Widget(result_func, datasets)
-    widget.show()
-    return app.exec_()
-            
+        for pid in xrange(m):
+            x, target = X[pid, :], Y[pid, :]
+            y = output_func(x)
+
+            y = numpy.uint8(y * 255).reshape(160, 80)
+            target = numpy.uint8(target * 255).reshape(160, 80)
+
+            data.set_images(gid, pid, 0, [y, target])
+
+    add(datasets.train_x.get_value(borrow=True),
+        datasets.train_y.get_value(borrow=True))
+        
+    add(datasets.valid_x.get_value(borrow=True),
+        datasets.valid_y.get_value(borrow=True))
+
+    add(datasets.test_x.get_value(borrow=True),
+        datasets.test_y.get_value(borrow=True))
+
+    data.save(_cached_result)
 
 if __name__ == '__main__':
 
-    datasets = _prepare_data(load_from_cache=True, save_to_cache=False)
+    datasets = _prepare_data(load_from_cache=False, save_to_cache=True)
 
-    model = _train_model(datasets, load_from_cache=True, save_to_cache=False)
+    model = _train_model(datasets, load_from_cache=False, save_to_cache=True)
 
-    _view_result(model, datasets)
+    _generate_result(model, datasets)
