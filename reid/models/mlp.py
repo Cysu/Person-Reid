@@ -1,7 +1,7 @@
 #!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
-from neural_net import NeuralNet
+from reid.models.neural_net import NeuralNet
 
 
 class MultiLayerPerceptron(NeuralNet):

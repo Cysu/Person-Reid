@@ -5,7 +5,7 @@ import numpy
 import theano
 import theano.tensor as T
 
-from neural_net import NeuralNet
+from reid.models.neural_net import NeuralNet
 
 
 class Layer(NeuralNet):

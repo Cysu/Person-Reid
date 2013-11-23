@@ -3,7 +3,8 @@
 
 from PyQt4 import QtGui
 from qimage2ndarray import array2qimage
-from gui_flow_layout import FlowLayout
+
+from reid.utils.gui_flow_layout import FlowLayout
 
 
 class ImagesGallery(QtGui.QWidget):
