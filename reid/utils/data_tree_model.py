@@ -4,7 +4,7 @@
 from PyQt4 import QtCore
 from PyQt4.QtCore import QVariant, QModelIndex, Qt
 
-from data_tree_node import DataTreeNode
+from reid.utils.data_tree_node import DataTreeNode
 
 
 # Refer to http://pyqt.sourceforge.net/Docs/PyQt4/qabstractitemmodel.html
@@ -17,15 +17,15 @@ class DataTreeModel(QtCore.QAbstractItemModel):
     The DataTreeModel class is the model of tree view widget in data viewer.
     """
 
-    def __init__(self, data_manager, parent=None):
+    def __init__(self, data_loader, parent=None):
         super(DataTreeModel, self).__init__(parent)
 
         # Setup model data
         self._root = DataTreeNode([QVariant("Name"), QVariant("Size")])
 
-        for gid in xrange(data_manager.n_groups()):
+        for gid in xrange(data_loader.get_n_groups()):
             # Get the pedestrian Matrix
-            P = data_manager.get_pedes(gid)
+            P = data_loader.get_pedes(gid)
 
             # Group node
             gdata = [QVariant("Group {0}".format(gid)), 
@@ -36,7 +36,7 @@ class DataTreeModel(QtCore.QAbstractItemModel):
 
             # Pedestrian nodes
             for pid in xrange(P.shape[0]):
-                n_images = data_manager.n_images(gid, pid)
+                n_images = data_loader.get_n_images(gid, pid)
 
                 pdata = [QVariant("Pedestrian {0}".format(pid)), 
                          QVariant(' + '.join(map(str, n_images)))]

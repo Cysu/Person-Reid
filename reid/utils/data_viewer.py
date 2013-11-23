@@ -2,13 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import sys
-
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
 
-from data_manager import DataManager
-from data_tree_model import DataTreeModel
-from gui_images_gallery import ImagesGallery
+from reid.utils.data_manager import DataLoader
+from reid.utils.data_tree_model import DataTreeModel
+from reid.utils.gui_images_gallery import ImagesGallery
 
 
 class PedesGallery(QtGui.QWidget):
@@ -72,8 +71,6 @@ class MainWindow(QtGui.QMainWindow):
 
         self._set_codec("UTF-8")
 
-        self._dm = DataManager(verbose=True)
-
         self._cur_pid = None
         self._cur_pedes = None
         self._cur_index = None
@@ -92,11 +89,12 @@ class MainWindow(QtGui.QMainWindow):
         if fpath.isEmpty(): return
 
         # TODO: Handle errors
-        self._dm.read(str(fpath))  # Convert QString into Python String
+        # Convert QString into Python String
+        self._data = DataLoader(str(fpath), verbose=True)
 
         # TODO: Check if we should manually delete it
         self._tree_dock = QtGui.QTreeView(self._dock)
-        self._tree_dock.setModel(DataTreeModel(self._dm, self._tree_dock))
+        self._tree_dock.setModel(DataTreeModel(self._data, self._tree_dock))
         self._tree_dock.setColumnWidth(0, 200)
         self._tree_dock.setColumnWidth(1, 100)
         self._tree_dock.doubleClicked[QtCore.QModelIndex].connect(self.display)
@@ -110,7 +108,7 @@ class MainWindow(QtGui.QMainWindow):
         pid = index.row()
 
         if gid >= 0 and pid >= 0:  # gid is -1 when double click a group
-            pedes = self._dm.get_pedes(gid)
+            pedes = self._data.get_pedes(gid)
 
             self._cur_pid = pid
             self._cur_pedes = pedes
