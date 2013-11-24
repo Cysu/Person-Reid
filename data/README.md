@@ -1,4 +1,4 @@
-# Data Format #
+## Data Format ##
 
 We define a unified data format for person re-identification. The data is 
 stored in Matlab file format, and the structure is illustrated below.

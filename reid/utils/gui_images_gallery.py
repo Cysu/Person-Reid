@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 from PyQt4 import QtGui
-from qimage2ndarray import array2qimage
 
+from reid.utils import ndarray2qimage
 from reid.utils.gui_flow_layout import FlowLayout
 
 
@@ -44,7 +44,7 @@ class ImagesGallery(QtGui.QWidget):
             self.subwidgets = self.subwidgets[0:nimages]
 
         for i, x in enumerate(self.subwidgets):
-            qimg = array2qimage(images[0, i])
+            qimg = ndarray2qimage(images[0, i])
             x.setPixmap(QtGui.QPixmap.fromImage(qimg))
 
     def _create_ui(self):
