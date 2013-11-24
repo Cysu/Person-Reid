@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy
-from PyQt4.QtGui import QImage
+from PySide.QtGui import QImage
 
 
 def cell(default, *args):

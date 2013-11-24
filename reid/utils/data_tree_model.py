@@ -1,14 +1,10 @@
 #!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
-from PyQt4 import QtCore
-from PyQt4.QtCore import QVariant, QModelIndex, Qt
+from PySide import QtCore
+from PySide.QtCore import QModelIndex, Qt
 
 from reid.utils.data_tree_node import DataTreeNode
-
-
-# Refer to http://pyqt.sourceforge.net/Docs/PyQt4/qabstractitemmodel.html
-# for subclassing QAbstractItemModel
 
 
 class DataTreeModel(QtCore.QAbstractItemModel):
@@ -21,15 +17,15 @@ class DataTreeModel(QtCore.QAbstractItemModel):
         super(DataTreeModel, self).__init__(parent)
 
         # Setup model data
-        self._root = DataTreeNode([QVariant("Name"), QVariant("Size")])
+        self._root = DataTreeNode(["Name", "Size"])
 
         for gid in xrange(data_loader.get_n_groups()):
             # Get the pedestrian Matrix
             P = data_loader.get_pedes(gid)
 
             # Group node
-            gdata = [QVariant("Group {0}".format(gid)), 
-                     QVariant("{0}×{1}".format(P.shape[0], P.shape[1]))]
+            gdata = ["Group {0}".format(gid), 
+                     "{0}×{1}".format(P.shape[0], P.shape[1])]
             gnode = DataTreeNode(gdata, self._root)
 
             self._root.add_child(gnode)
@@ -38,8 +34,8 @@ class DataTreeModel(QtCore.QAbstractItemModel):
             for pid in xrange(P.shape[0]):
                 n_images = data_loader.get_n_images(gid, pid)
 
-                pdata = [QVariant("Pedestrian {0}".format(pid)), 
-                         QVariant(' + '.join(map(str, n_images)))]
+                pdata = ["Pedestrian {0}".format(pid), 
+                         ' + '.join(map(str, n_images))]
                 pnode = DataTreeNode(pdata, gnode)
 
                 gnode.add_child(pnode)
@@ -65,12 +61,12 @@ class DataTreeModel(QtCore.QAbstractItemModel):
 
     def headerData(self, section, orientation, role):
         if orientation != Qt.Horizontal or role != Qt.DisplayRole: 
-            return QVariant()
+            return None
 
         return self._root.get_data(section)
 
     def data(self, index, role):
-        if not index.isValid() or role != Qt.DisplayRole: return QVariant()
+        if not index.isValid() or role != Qt.DisplayRole: return None
 
         return index.internalPointer().get_data(index.column())
 

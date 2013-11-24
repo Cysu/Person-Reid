@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import sys
-from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt
+from PySide import QtGui, QtCore
+from PySide.QtCore import Qt
 
 from reid.utils.data_manager import DataLoader
 from reid.utils.data_tree_model import DataTreeModel
@@ -83,10 +83,10 @@ class MainWindow(QtGui.QMainWindow):
         self.showMaximized()
 
     def open(self):
-        fpath = QtGui.QFileDialog.getOpenFileName(self, "Open File",
+        fpath, __ = QtGui.QFileDialog.getOpenFileName(self, "Open File",
             QtCore.QDir.homePath(), "Matlab File (*.mat)")
 
-        if fpath.isEmpty(): return
+        if fpath is None: return
 
         # TODO: Handle errors
         # Convert QString into Python String

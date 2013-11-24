@@ -1,7 +1,7 @@
 #!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
-from PyQt4 import QtGui
+from PySide import QtGui
 
 from reid.utils import ndarray2qimage
 from reid.utils.gui_flow_layout import FlowLayout
