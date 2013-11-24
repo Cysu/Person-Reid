@@ -61,7 +61,7 @@ def train(model, datasets,
         print "epoch {0}".format(epoch)
 
         for j in xrange(n_batches):
-            cur_iter = (epoch - 1) * n_batches + j
+            cur_iter = epoch * n_batches + j
 
             # train
             batch_cost = train_func(j)

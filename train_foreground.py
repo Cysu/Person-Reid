@@ -12,6 +12,7 @@ from reid.preproc import imageproc
 from reid.datasets.datasets import Datasets
 from reid.models.mlp import MultiLayerPerceptron as Mlp
 from reid.models.layer import Layer
+from reid.models import active_functions as actfuncs
 from reid.utils.data_manager import DataLoader, DataSaver
 
 
@@ -69,8 +70,8 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
         # Build model
 
         numpy_rng = numpy.random.RandomState(999987)
-        layers = [Layer(numpy_rng, 38400, 1024, T.nnet.sigmoid),
-                  Layer(numpy_rng, 1024, 12800, T.nnet.sigmoid)]
+        layers = [Layer(numpy_rng, 38400, 1024, actfuncs.sigmoid),
+                  Layer(numpy_rng, 1024, 12800, actfuncs.sigmoid)]
 
         model = Mlp(layers,
                     cost_func=costs.MeanBinaryCrossEntropy,
