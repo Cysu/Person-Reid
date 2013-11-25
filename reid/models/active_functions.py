@@ -3,12 +3,13 @@
 
 import theano.tensor as T
 
+# lambda functions cannot be pickled
 
-# TODO: rectifier active function cannot be pickled
+def identity(x):
+    return x
 
-identity = lambda x: x
-
-rectifier = lambda x: x * (x > 0.0)
+def rectifier(x):
+    return x * (x > 0.0)
 
 sigmoid = T.nnet.sigmoid
 

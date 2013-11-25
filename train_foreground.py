@@ -124,8 +124,8 @@ def _generate_result(model, datasets):
 
 if __name__ == '__main__':
 
-    datasets = _prepare_data(load_from_cache=False, save_to_cache=False)
+    datasets = _prepare_data(load_from_cache=True, save_to_cache=False)
 
-    model = _train_model(datasets, load_from_cache=False, save_to_cache=False)
+    model = _train_model(datasets, load_from_cache=False, save_to_cache=True)
 
     _generate_result(model, datasets)
