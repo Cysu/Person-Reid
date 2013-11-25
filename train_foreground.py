@@ -6,13 +6,13 @@ import numpy
 import theano
 import theano.tensor as T
 
-import reid.costs as costs
 import reid.optimization.sgd as sgd
 from reid.preproc import imageproc
 from reid.datasets.datasets import Datasets
 from reid.models.mlp import MultiLayerPerceptron as Mlp
 from reid.models.layer import Layer
 from reid.models import active_functions as actfuncs
+from reid.models import cost_functions as costfuncs
 from reid.utils.data_manager import DataLoader, DataSaver
 
 
@@ -28,14 +28,14 @@ def _prepare_data(load_from_cache=False, save_to_cache=False):
             datasets = cPickle.load(f)
     else:
         # Setup data files
-
-        image_data = DataLoader('data/parse/cuhk_large_labeled_subsampled.mat')
-        parse_data = DataLoader('data/parse/cuhk_large_labeled_subsampled_parse.mat')
+        image_data = DataLoader('data/parse/cuhk_large_labeled_subsampled.mat', verbose=True)
+        parse_data = DataLoader('data/parse/cuhk_large_labeled_subsampled_parse.mat', verbose=True)
 
         images = image_data.get_all_images()
         parses = parse_data.get_all_images()
 
         # Pre-processing
+        print "Pre-processing ..."
 
         for i, image in enumerate(images):
             image = imageproc.subtract_luminance(image)
@@ -51,6 +51,7 @@ def _prepare_data(load_from_cache=False, save_to_cache=False):
         parses = imageproc.images2mat(parses)
 
         # Prepare the datasets
+        print "Prepare the datasets ..."
         
         datasets = Datasets(images, parses)
         datasets.split(train_ratio=0.5, valid_ratio=0.3)
@@ -68,14 +69,15 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
             model = cPickle.load(f)
     else:
         # Build model
+        print "Building model ..."
 
         numpy_rng = numpy.random.RandomState(999987)
         layers = [Layer(numpy_rng, 38400, 1024, actfuncs.sigmoid),
                   Layer(numpy_rng, 1024, 12800, actfuncs.sigmoid)]
 
         model = Mlp(layers,
-                    cost_func=costs.MeanBinaryCrossEntropy,
-                    error_func=costs.MeanBinaryCrossEntropy)
+                    cost_func=costfuncs.mean_binary_cross_entropy,
+                    error_func=costfuncs.mean_binary_cross_entropy)
 
         sgd.train(model, datasets)
 
@@ -122,8 +124,8 @@ def _generate_result(model, datasets):
 
 if __name__ == '__main__':
 
-    datasets = _prepare_data(load_from_cache=False, save_to_cache=True)
+    datasets = _prepare_data(load_from_cache=False, save_to_cache=False)
 
-    model = _train_model(datasets, load_from_cache=False, save_to_cache=True)
+    model = _train_model(datasets, load_from_cache=False, save_to_cache=False)
 
     _generate_result(model, datasets)

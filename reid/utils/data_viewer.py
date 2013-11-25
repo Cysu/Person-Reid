@@ -86,7 +86,7 @@ class MainWindow(QtGui.QMainWindow):
         fpath, __ = QtGui.QFileDialog.getOpenFileName(self, "Open File",
             QtCore.QDir.homePath(), "Matlab File (*.mat)")
 
-        if fpath is None: return
+        if not fpath: return
 
         # TODO: Handle errors
         # Convert QString into Python String
