@@ -45,6 +45,7 @@ def _prepare_data(load_from_cache=False, save_to_cache=False):
         images = imageproc.images2mat(images)
 
         for i, parse in enumerate(parses):
+            parse = imageproc.imresize(parse, (80, 40))
             parse = imageproc.binarize(parse, 0)
             parses[i] = parse
 
@@ -72,8 +73,8 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
         print "Building model ..."
 
         numpy_rng = numpy.random.RandomState(999987)
-        layers = [Layer(numpy_rng, 38400, 1024, actfuncs.sigmoid),
-                  Layer(numpy_rng, 1024, 12800, actfuncs.sigmoid)]
+        layers = [Layer(numpy_rng, 38400, 3200, actfuncs.sigmoid),
+                  Layer(numpy_rng, 3200, 3200, actfuncs.sigmoid)]
 
         model = Mlp(layers,
                     cost_func=costfuncs.mean_binary_cross_entropy,
@@ -87,7 +88,7 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
 
     return model
 
-def _generate_result(model, datasets):
+def _generate_result(model, datasets, imgh, imgw):
     # For convenience, we will save the result in our data format.
     # Regard train, valid, and test sets as three groups.
     # Each pedestrian only has one view, containing output and target images.
@@ -106,8 +107,8 @@ def _generate_result(model, datasets):
             x, target = X[pid, :], Y[pid, :]
             y = output_func(x)
 
-            y = numpy.uint8(y * 255).reshape(160, 80)
-            target = numpy.uint8(target * 255).reshape(160, 80)
+            y = numpy.uint8(y * 255).reshape(imgh, imgw)
+            target = numpy.uint8(target * 255).reshape(imgh, imgw)
 
             data.set_images(gid, pid, 0, [y, target])
 
@@ -124,8 +125,8 @@ def _generate_result(model, datasets):
 
 if __name__ == '__main__':
 
-    datasets = _prepare_data(load_from_cache=True, save_to_cache=False)
+    datasets = _prepare_data(load_from_cache=False, save_to_cache=False)
 
     model = _train_model(datasets, load_from_cache=False, save_to_cache=True)
 
-    _generate_result(model, datasets)
+    _generate_result(model, datasets, imgh=80, imgw=40)
