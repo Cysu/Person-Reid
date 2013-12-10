@@ -45,7 +45,6 @@ def _prepare_data(load_from_cache=False, save_to_cache=False):
         images = imageproc.images2mat(images)
 
         for i, parse in enumerate(parses):
-            parse = imageproc.imresize(parse, (80, 40))
             parse = imageproc.binarize(parse, 0)
             parses[i] = parse
 
@@ -73,8 +72,8 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
         print "Building model ..."
 
         numpy_rng = numpy.random.RandomState(999987)
-        layers = [Layer(numpy_rng, 38400, 3200, actfuncs.sigmoid),
-                  Layer(numpy_rng, 3200, 3200, actfuncs.sigmoid)]
+        layers = [Layer(numpy_rng, 38400, 1024, actfuncs.sigmoid),
+                  Layer(numpy_rng, 1024, 12800, actfuncs.sigmoid)]
 
         model = Mlp(layers,
                     cost_func=costfuncs.mean_binary_cross_entropy,
@@ -129,4 +128,4 @@ if __name__ == '__main__':
 
     model = _train_model(datasets, load_from_cache=False, save_to_cache=True)
 
-    _generate_result(model, datasets, imgh=80, imgw=40)
+    _generate_result(model, datasets, imgh=160, imgw=80)
