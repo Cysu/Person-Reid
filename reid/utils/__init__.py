@@ -5,6 +5,8 @@ import numpy
 from PySide.QtGui import QImage
 
 
+numpy_rng = numpy.random.RandomState(999987)
+
 def cell(default, *args):
     result = [default for __ in xrange(args[0])]
 
