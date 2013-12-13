@@ -10,7 +10,7 @@ import reid.optimization.sgd as sgd
 from reid.preproc import imageproc
 from reid.datasets.datasets import Datasets
 from reid.models.neural_net import NeuralNet
-from reid.models.layers import FullyConnectedLayer as FullLayer
+from reid.models.layers import FullConnLayer, ConvPoolLayer
 from reid.models import active_functions as actfuncs
 from reid.models import cost_functions as costfuncs
 from reid.utils.data_manager import DataLoader, DataSaver
@@ -69,14 +69,14 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
         # Build model
         print "Building model ..."
 
-        layers = [FullLayer(38400, 1024, actfuncs.sigmoid),
-                  FullLayer(1024, 12800, actfuncs.sigmoid)]
+        layers = [ConvPoolLayer((4,3,5,5), (2,2), (3,160,80), actfuncs.sigmoid, True),
+                  FullConnLayer(11856, 12800, actfuncs.sigmoid)]
 
         model = NeuralNet(layers,
                           cost_func=costfuncs.mean_binary_cross_entropy,
                           error_func=costfuncs.mean_binary_cross_entropy)
 
-        sgd.train(model, datasets)
+        sgd.train(model, datasets, n_epoch=5)
 
     if save_to_cache:
         with open(_cached_model, 'wb') as f:
@@ -89,7 +89,7 @@ def _generate_result(model, datasets, imgh, imgw):
     # Regard train, valid, and test sets as three groups.
     # Each pedestrian only has one view, containing output and target images.
 
-    x = T.vector('x')
+    x = T.matrix('x')
     y = model.get_output(x)
     output_func = theano.function(inputs=[x], outputs=y)
 
@@ -100,7 +100,7 @@ def _generate_result(model, datasets, imgh, imgw):
         gid = data.add_group(m, 1)
 
         for pid in xrange(m):
-            x, target = X[pid, :], Y[pid, :]
+            x, target = X[pid:pid+1, :], Y[pid, :] # Ensure x to be a matrix
             y = output_func(x)
             y = numpy.uint8(y * 255).reshape(imgh, imgw)
             target = numpy.uint8(target * 255).reshape(imgh, imgw)
