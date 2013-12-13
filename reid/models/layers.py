@@ -57,14 +57,14 @@ class ConvPoolLayer(Block):
             filters=self._W,
             filter_shape=self._filter_shape)
 
-        z = T.signal.downsample.max_pool_2d(
+        y = T.signal.downsample.max_pool_2d(
             input=z,
             ds=self._pool_shape,
             ignore_border=True)
 
-        z = z + self._b.dimshuffle('x', 0, 'x', 'x')
+        y = y + self._b.dimshuffle('x', 0, 'x', 'x')
 
-        z = z.ravel()
+        y = y.ravel()
 
-        return z if self._active_func is None else self._active_func(z)
+        return y if self._active_func is None else self._active_func(y)
 

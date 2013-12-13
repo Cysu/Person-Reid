@@ -9,8 +9,8 @@ import theano.tensor as T
 import reid.optimization.sgd as sgd
 from reid.preproc import imageproc
 from reid.datasets.datasets import Datasets
-from reid.models.mlp import MultiLayerPerceptron as Mlp
-from reid.models.layer import Layer
+from reid.models.neural_net import NeuralNet
+from reid.models.layers import FullyConnectedLayer as FullLayer
 from reid.models import active_functions as actfuncs
 from reid.models import cost_functions as costfuncs
 from reid.utils.data_manager import DataLoader, DataSaver
@@ -22,7 +22,6 @@ _cached_result = 'cache/foreground_result.mat'
 
 
 def _prepare_data(load_from_cache=False, save_to_cache=False):
-
     if load_from_cache:
         with open(_cached_datasets, 'rb') as f:
             datasets = cPickle.load(f)
@@ -63,7 +62,6 @@ def _prepare_data(load_from_cache=False, save_to_cache=False):
     return datasets
 
 def _train_model(datasets, load_from_cache=False, save_to_cache=False):
-
     if load_from_cache:
         with open(_cached_model, 'rb') as f:
             model = cPickle.load(f)
@@ -71,13 +69,12 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
         # Build model
         print "Building model ..."
 
-        numpy_rng = numpy.random.RandomState(999987)
-        layers = [Layer(numpy_rng, 38400, 1024, actfuncs.sigmoid),
-                  Layer(numpy_rng, 1024, 12800, actfuncs.sigmoid)]
+        layers = [FullLayer(38400, 1024, actfuncs.sigmoid),
+                  FullLayer(1024, 12800, actfuncs.sigmoid)]
 
-        model = Mlp(layers,
-                    cost_func=costfuncs.mean_binary_cross_entropy,
-                    error_func=costfuncs.mean_binary_cross_entropy)
+        model = NeuralNet(layers,
+                          cost_func=costfuncs.mean_binary_cross_entropy,
+                          error_func=costfuncs.mean_binary_cross_entropy)
 
         sgd.train(model, datasets)
 
@@ -93,7 +90,7 @@ def _generate_result(model, datasets, imgh, imgw):
     # Each pedestrian only has one view, containing output and target images.
 
     x = T.vector('x')
-    y = model.get_outputs(x)[-1]
+    y = model.get_output(x)
     output_func = theano.function(inputs=[x], outputs=y)
 
     data = DataSaver()
@@ -105,10 +102,8 @@ def _generate_result(model, datasets, imgh, imgw):
         for pid in xrange(m):
             x, target = X[pid, :], Y[pid, :]
             y = output_func(x)
-
             y = numpy.uint8(y * 255).reshape(imgh, imgw)
             target = numpy.uint8(target * 255).reshape(imgh, imgw)
-
             data.set_images(gid, pid, 0, [y, target])
 
     add(datasets.train_x.get_value(borrow=True),
@@ -123,9 +118,6 @@ def _generate_result(model, datasets, imgh, imgw):
     data.save(_cached_result)
 
 if __name__ == '__main__':
-
-    datasets = _prepare_data(load_from_cache=False, save_to_cache=False)
-
+    datasets = _prepare_data(load_from_cache=True, save_to_cache=False)
     model = _train_model(datasets, load_from_cache=False, save_to_cache=True)
-
     _generate_result(model, datasets, imgh=160, imgw=80)

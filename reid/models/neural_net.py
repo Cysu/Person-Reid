@@ -3,32 +3,32 @@
 
 import theano.tensor as T
 
+from reid.models.block import Block
 
-class NeuralNet(object):
-    """Base class of neural network (NeuralNet)"""
 
-    def __init__(self, cost_func=None, error_func=None):
+class NeuralNet(Block):
+    """A composition of several blocks"""
+
+    def __init__(self, blocks, cost_func=None, error_func=None):
+        self._blocks = blocks
         self._cost_func = cost_func
         self._error_func = error_func
 
-        raise NotImplementedError(
-            str(type(self)) + " does not implement __init__")
+        self._params = []
+        for block in blocks:
+            self._params.extend(block.parameters)
 
-    def get_layers(self):
-        raise NotImplementedError(
-            str(type(self)) + " does not implement get_layers")
-
-    def get_outputs(self, x):
-        raise NotImplementedError(
-            str(type(self)) + " does not implement get_outputs")
+    def get_output(self, x):
+        for block in self._blocks:
+            y = block.get_output(x)
+            x = y
+        return y
 
     def get_cost_updates(self, x, target, learning_rate):
         assert self._cost_func is not None
 
-        y = self.get_outputs(x)[-1]
-
+        y = self.get_output(x)
         cost = self._cost_func(output=y, target=target)
-
         grads = T.grad(cost, self._params)
 
         updates = []
@@ -40,8 +40,7 @@ class NeuralNet(object):
     def get_error(self, x, target):
         assert self._error_func is not None
 
-        y = self.get_outputs(x)[-1]
-
+        y = self.get_output(x)
         error = self._error_func(output=y, target=target)
 
         return error
