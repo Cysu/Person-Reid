@@ -8,11 +8,10 @@ import theano.tensor as T
 
 
 def train(model, datasets,
-          batch_size=10, n_epoch=100, learning_rate=1e-4, valid_freq=None):
+          batch_size=10, n_epoch=100, learning_rate=1e-4,
+          improvement=0.999, patience_incr=2.0):
     # Setup parameters
     n_batches = datasets.get_train_size() / batch_size
-
-    if valid_freq is None: valid_freq = n_batches
 
     # Setup training, validation and testing functions
     x = T.matrix('x') # input data
@@ -47,32 +46,52 @@ def train(model, datasets,
     best_valid_error = numpy.inf
     test_error = numpy.inf
 
-    begin_time = time.clock()
+    valid_freq = n_batches
+    patience = 20 * n_batches
+    
+    done_looping = False
     
     print "Start training ..."
+
+    begin_time = time.clock()
 
     for epoch in xrange(n_epoch):
         print "epoch {0}".format(epoch)
 
-        for j in xrange(n_batches):
-            cur_iter = epoch * n_batches + j
+        if done_looping: break
 
-            # train
-            batch_cost = train_func(j)
-            print "[train] batch {0}/{1}, iter {2}, cost {3}".format(
-                j+1, n_batches, cur_iter, batch_cost)
+        try:
+            for j in xrange(n_batches):
+                cur_iter = epoch * n_batches + j
 
-            # validate
-            if (cur_iter + 1) % valid_freq == 0:
-                valid_error = valid_func()
-                print "[valid] error {0}".format(valid_error)
+                # train
+                batch_cost = train_func(j)
+                print "[train] batch {0}/{1}, iter {2}, cost {3}".format(
+                    j+1, n_batches, cur_iter, batch_cost)
 
-                # test
-                if valid_error < best_valid_error:
-                    best_valid_error = valid_error
+                # validate
+                if (cur_iter + 1) % valid_freq == 0:
+                    valid_error = valid_func()
+                    print "[valid] error {0}".format(valid_error)
 
-                    test_error = test_func()
-                    print "[test] error {0}".format(test_error)
+                    # test
+                    if valid_error < best_valid_error:
+                        if valid_error < best_valid_error * improvement:
+                            patience = max(patience, cur_iter * patience_incr)
+
+                        best_valid_error = valid_error
+
+                        test_error = test_func()
+                        print "[test] error {0}".format(test_error)
+
+                # early stoping
+                if cur_iter > patience:
+                    done_looping = True
+                    break
+
+        except KeyboardInterrupt:
+            print "Keyboard interrupt. Stop training."
+            done_looping = True
 
     end_time = time.clock()
 
