@@ -61,35 +61,7 @@ def _prepare_data(load_from_cache=False, save_to_cache=False):
 
     return datasets
 
-def _train_model(datasets, load_from_cache=False, save_to_cache=False):
-    if load_from_cache:
-        with open(_cached_model, 'rb') as f:
-            model = cPickle.load(f)
-    else:
-        # Build model
-        print "Building model ..."
-
-        layers = [FullConnLayer(input_size=38400,
-                                output_size=1024,
-                                active_func=actfuncs.sigmoid),
-
-                  FullConnLayer(input_size=1024,
-                                output_size=12800,
-                                active_func=actfuncs.sigmoid)]
-
-        model = NeuralNet(layers,
-                          cost_func=costfuncs.mean_binary_cross_entropy,
-                          error_func=costfuncs.mean_binary_cross_entropy)
-
-        sgd.train(model, datasets, n_epoch=100, learning_rate=1e-3)
-
-    if save_to_cache:
-        with open(_cached_model, 'wb') as f:
-            cPickle.dump(model, f, protocol=cPickle.HIGHEST_PROTOCOL)
-
-    return model
-
-def _choose_threshold(model, datasets, display=False):
+def _choose_threshold(model, datasets, verbose=False):
     # The trained model output the probability of each pixel to be foreground.
     # We will choose a threshold for it based on ROC curve.
 
@@ -116,7 +88,7 @@ def _choose_threshold(model, datasets, display=False):
         roc.append([t, fpr, tpr])
         if threshold == -1 and tpr >= 0.9: threshold = t
     
-    if display:
+    if verbose:
         import matplotlib.pyplot as pyplot
 
         print roc
@@ -127,6 +99,37 @@ def _choose_threshold(model, datasets, display=False):
     print "threshold is chosen as {0}".format(threshold)
 
     return threshold
+
+def _train_model(datasets, load_from_cache=False, save_to_cache=False):
+    if load_from_cache:
+        with open(_cached_model, 'rb') as f:
+            model, threshold = cPickle.load(f)
+    else:
+        # Build model
+        print "Building model ..."
+
+        layers = [FullConnLayer(input_size=38400,
+                                output_size=1024,
+                                active_func=actfuncs.sigmoid),
+
+                  FullConnLayer(input_size=1024,
+                                output_size=12800,
+                                active_func=actfuncs.sigmoid)]
+
+        model = NeuralNet(layers,
+                          cost_func=costfuncs.mean_binary_cross_entropy,
+                          error_func=costfuncs.mean_binary_cross_entropy)
+
+        sgd.train(model, datasets, n_epoch=100, learning_rate=1e-3)
+
+        threshold = _choose_threshold(model, datasets, verbose=False)
+
+    if save_to_cache:
+        with open(_cached_model, 'wb') as f:
+            cPickle.dump((model, threshold), f, protocol=cPickle.HIGHEST_PROTOCOL)
+
+    return (model, threshold)
+
 
 def _generate_result(model, datasets, image_shape, threshold):
     # For convenience, we will save the result in our data format.
@@ -163,6 +166,5 @@ def _generate_result(model, datasets, image_shape, threshold):
 
 if __name__ == '__main__':
     datasets = _prepare_data(load_from_cache=True, save_to_cache=False)
-    model = _train_model(datasets, load_from_cache=False, save_to_cache=True)
-    threshold = _choose_threshold(model, datasets, display=False)
+    model, threshold = _train_model(datasets, load_from_cache=False, save_to_cache=True)
     _generate_result(model, datasets, (160, 80), threshold)

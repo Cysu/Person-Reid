@@ -9,7 +9,7 @@ import theano.tensor as T
 
 def train(model, datasets,
           batch_size=10, n_epoch=100, learning_rate=1e-4,
-          improvement=0.999, patience_incr=2.0):
+          improvement=1-1e-3, patience_incr=2.0, learning_rate_decr=0.95):
     # Setup parameters
     n_batches = datasets.get_train_size() / batch_size
 
@@ -17,12 +17,13 @@ def train(model, datasets,
     x = T.matrix('x') # input data
     y = T.matrix('y') # corresponding targets
     i = T.lscalar('i') # batch index
+    alpha = T.scalar('alpha')
 
-    cost, updates = model.get_cost_updates(x, y, learning_rate)
+    cost, updates = model.get_cost_updates(x, y, alpha)
     error = model.get_error(x, y)
 
     train_func = theano.function(
-        inputs=[i], outputs=cost, updates=updates,
+        inputs=[i, alpha], outputs=cost, updates=updates,
         givens={
             x: datasets.train_x[i*batch_size : (i+1)*batch_size],
             y: datasets.train_y[i*batch_size : (i+1)*batch_size]
@@ -48,7 +49,7 @@ def train(model, datasets,
 
     valid_freq = n_batches
     patience = 20 * n_batches
-    
+
     done_looping = False
     
     print "Start training ..."
@@ -65,7 +66,7 @@ def train(model, datasets,
                 cur_iter = epoch * n_batches + j
 
                 # train
-                batch_cost = train_func(j)
+                batch_cost = train_func(j, learning_rate)
                 print "[train] batch {0}/{1}, iter {2}, cost {3}".format(
                     j+1, n_batches, cur_iter, batch_cost)
 
@@ -78,6 +79,10 @@ def train(model, datasets,
                     if valid_error < best_valid_error:
                         if valid_error < best_valid_error * improvement:
                             patience = max(patience, cur_iter * patience_incr)
+                            learning_rate = learning_rate * learning_rate_decr
+
+                            print "Update patience {0}, learning_rate {1}".format(
+                                patience, learning_rate)
 
                         best_valid_error = valid_error
 

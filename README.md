@@ -18,5 +18,5 @@ Characteristic (CMC)* curve is used for evaluation.
 
 ## INSTALLATION ##
 
-At current stage of research, no setup scripts provided. Please just export this project's path to `PYTHONPATH`.
+At current stage of research, no setup scripts are provided. Please just export this project's path to `PYTHONPATH`.
 
