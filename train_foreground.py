@@ -10,7 +10,7 @@ import reid.optimization.sgd as sgd
 from reid.preproc import imageproc
 from reid.datasets.datasets import Datasets
 from reid.models.neural_net import NeuralNet
-from reid.models.layers import FullConnLayer, ConvPoolLayer
+from reid.models.layers import FullConnLayer
 from reid.models import active_functions as actfuncs
 from reid.models import cost_functions as costfuncs
 from reid.utils.data_manager import DataLoader, DataSaver
@@ -69,13 +69,11 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
         # Build model
         print "Building model ..."
 
-        layers = [ConvPoolLayer(filter_shape=(4,3,5,5),
-                                pool_shape=(2,2),
-                                image_shape=(3,160,80),
-                                active_func=actfuncs.sigmoid,
-                                flatten_output=True),
+        layers = [FullConnLayer(input_size=38400,
+                                output_size=1024,
+                                active_func=actfuncs.sigmoid),
 
-                  FullConnLayer(input_size=11856,
+                  FullConnLayer(input_size=1024,
                                 output_size=12800,
                                 active_func=actfuncs.sigmoid)]
 
@@ -83,7 +81,7 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
                           cost_func=costfuncs.mean_binary_cross_entropy,
                           error_func=costfuncs.mean_binary_cross_entropy)
 
-        sgd.train(model, datasets, n_epoch=5, learning_rate=1e-5)
+        sgd.train(model, datasets, n_epoch=100, learning_rate=1e-3)
 
     if save_to_cache:
         with open(_cached_model, 'wb') as f:
@@ -91,7 +89,46 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
 
     return model
 
-def _generate_result(model, datasets, image_shape):
+def _choose_threshold(model, datasets, display=False):
+    # The trained model output the probability of each pixel to be foreground.
+    # We will choose a threshold for it based on ROC curve.
+
+    x = datasets.train_x.get_value(borrow=True)
+    target = datasets.train_y.get_value(borrow=True).astype(bool)
+    y = theano.function(inputs=[], outputs=model.get_output(x))()
+
+    n_true = (target == True).sum(axis=1)
+    n_false = (target == False).sum(axis=1)
+
+    threshold = -1
+
+    def count_roc(t):
+        z = numpy.asarray(y >= t)
+        fp = ((z == True) & (target == False)).sum(axis=1)
+        tp = ((z == True) & (target == True)).sum(axis=1)
+        fpr = (fp * 1.0 / n_false).mean()
+        tpr = (tp * 1.0 / n_true).mean()
+        return (fpr, tpr)
+
+    roc = []
+    for t in numpy.arange(1.0, 0.0, -0.01):
+        fpr, tpr = count_roc(t)
+        roc.append([t, fpr, tpr])
+        if threshold == -1 and tpr >= 0.9: threshold = t
+    
+    if display:
+        import matplotlib.pyplot as pyplot
+
+        print roc
+        roc = numpy.asarray(roc)
+        pyplot.plot(roc[:, 1], roc[:, 2])
+        pyplot.show()
+
+    print "threshold is chosen as {0}".format(threshold)
+
+    return threshold
+
+def _generate_result(model, datasets, image_shape, threshold):
     # For convenience, we will save the result in our data format.
     # Regard train, valid, and test sets as three groups.
     # Each pedestrian only has one view, containing output and target images.
@@ -108,8 +145,8 @@ def _generate_result(model, datasets, image_shape):
 
         for pid in xrange(m):
             x, target = X[pid:pid+1, :], Y[pid, :] # Ensure x to be a matrix
-            y = output_func(x)
-            y = numpy.uint8(y * 255).reshape(image_shape)
+            y = (output_func(x) >= threshold).astype(numpy.uint8) * 255
+            y = y.reshape(image_shape)
             target = numpy.uint8(target * 255).reshape(image_shape)
             data.set_images(gid, pid, 0, [y, target])
 
@@ -126,5 +163,6 @@ def _generate_result(model, datasets, image_shape):
 
 if __name__ == '__main__':
     datasets = _prepare_data(load_from_cache=True, save_to_cache=False)
-    model = _train_model(datasets, load_from_cache=False, save_to_cache=False)
-    _generate_result(model, datasets, (160, 80))
+    model = _train_model(datasets, load_from_cache=False, save_to_cache=True)
+    threshold = _choose_threshold(model, datasets, display=False)
+    _generate_result(model, datasets, (160, 80), threshold)
