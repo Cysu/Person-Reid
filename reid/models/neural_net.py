@@ -9,7 +9,7 @@ from reid.models.block import Block
 class NeuralNet(Block):
     """A composition of several blocks"""
 
-    def __init__(self, blocks, cost_func=None, error_func=None):
+    def __init__(self, blocks, cost_func, error_func):
         self._blocks = blocks
         self._cost_func = cost_func
         self._error_func = error_func
@@ -25,8 +25,6 @@ class NeuralNet(Block):
         return y
 
     def get_cost_updates(self, x, target, learning_rate):
-        assert self._cost_func is not None
-
         y = self.get_output(x)
         cost = self._cost_func(output=y, target=target)
         grads = T.grad(cost, self._params)
@@ -38,8 +36,6 @@ class NeuralNet(Block):
         return (cost, updates)
         
     def get_error(self, x, target):
-        assert self._error_func is not None
-
         y = self.get_output(x)
         error = self._error_func(output=y, target=target)
 

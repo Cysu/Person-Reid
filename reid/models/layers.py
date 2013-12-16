@@ -10,6 +10,8 @@ from reid.utils import numpy_rng
 
 
 class FullConnLayer(Block):
+    """Fully connected layer"""
+
     def __init__(self, input_size, output_size, active_func=None):
         self._active_func = active_func
 
@@ -32,6 +34,8 @@ class FullConnLayer(Block):
 
 
 class ConvPoolLayer(Block):
+    """Convolutional and max-pooling layer"""
+
     def __init__(self, filter_shape, pool_shape,
                  image_shape=None, active_func=None, flatten_output=False):
         self._filter_shape = filter_shape
@@ -40,9 +44,12 @@ class ConvPoolLayer(Block):
         self._active_func = active_func
         self._flatten_output = flatten_output
 
+        fan_in = numpy.prod(filter_shape[1:])
+        fan_out = filter_shape[0] * numpy.prod(filter_shape[2:]) / numpy.prod(pool_shape)
+
         init_W = numpy.asarray(numpy_rng.uniform(
-            low=-numpy.sqrt(3.0 / numpy.prod(filter_shape[1:])),
-            high=numpy.sqrt(3.0 / numpy.prod(filter_shape[1:])),
+            low=-4 * numpy.sqrt(6.0 / (fan_in + fan_out)),
+            high=4 * numpy.sqrt(6.0 / (fan_in + fan_out)),
             size=filter_shape), dtype=theano.config.floatX)
 
         self._W = theano.shared(value=init_W, name='W', borrow=True)
@@ -55,8 +62,7 @@ class ConvPoolLayer(Block):
 
     def get_output(self, x):
         if self._image_shape is not None:
-            input_shape = (x.shape[0],) + self._image_shape
-            x = x.reshape(input_shape)
+            x = x.reshape((x.shape[0],) + self._image_shape)
 
         z = T.nnet.conv.conv2d(
             input=x,
@@ -74,6 +80,6 @@ class ConvPoolLayer(Block):
             y = self._active_func(y)
 
         if self._flatten_output:
-            y = y.reshape((y.shape[0], y.shape[1:].prod()))
+            y = y.flatten(2)
 
         return y

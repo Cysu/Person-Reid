@@ -9,16 +9,12 @@ import theano.tensor as T
 
 def train(model, datasets,
           batch_size=10, n_epoch=100, learning_rate=1e-4, valid_freq=None):
-
     # Setup parameters
-
     n_batches = datasets.get_train_size() / batch_size
 
     if valid_freq is None: valid_freq = n_batches
 
-
     # Setup training, validation and testing functions
-
     x = T.matrix('x') # input data
     y = T.matrix('y') # corresponding targets
     i = T.lscalar('i') # batch index
@@ -47,9 +43,7 @@ def train(model, datasets,
             y: datasets.test_y
         })
 
-
     # Start training
-
     best_valid_error = numpy.inf
     test_error = numpy.inf
 
@@ -85,4 +79,3 @@ def train(model, datasets,
     print "Training complete, time {0}".format(end_time - begin_time)
     print "Best validation error {0}, test error {1}".format(
         best_valid_error, test_error)
-

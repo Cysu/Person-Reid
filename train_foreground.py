@@ -69,14 +69,21 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
         # Build model
         print "Building model ..."
 
-        layers = [ConvPoolLayer((4,3,5,5), (2,2), (3,160,80), actfuncs.sigmoid, True),
-                  FullConnLayer(11856, 12800, actfuncs.sigmoid)]
+        layers = [ConvPoolLayer(filter_shape=(4,3,5,5),
+                                pool_shape=(2,2),
+                                image_shape=(3,160,80),
+                                active_func=actfuncs.sigmoid,
+                                flatten_output=True),
+
+                  FullConnLayer(input_size=11856,
+                                output_size=12800,
+                                active_func=actfuncs.sigmoid)]
 
         model = NeuralNet(layers,
                           cost_func=costfuncs.mean_binary_cross_entropy,
                           error_func=costfuncs.mean_binary_cross_entropy)
 
-        sgd.train(model, datasets, n_epoch=5)
+        sgd.train(model, datasets, n_epoch=5, learning_rate=1e-5)
 
     if save_to_cache:
         with open(_cached_model, 'wb') as f:
@@ -84,7 +91,7 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
 
     return model
 
-def _generate_result(model, datasets, imgh, imgw):
+def _generate_result(model, datasets, image_shape):
     # For convenience, we will save the result in our data format.
     # Regard train, valid, and test sets as three groups.
     # Each pedestrian only has one view, containing output and target images.
@@ -102,8 +109,8 @@ def _generate_result(model, datasets, imgh, imgw):
         for pid in xrange(m):
             x, target = X[pid:pid+1, :], Y[pid, :] # Ensure x to be a matrix
             y = output_func(x)
-            y = numpy.uint8(y * 255).reshape(imgh, imgw)
-            target = numpy.uint8(target * 255).reshape(imgh, imgw)
+            y = numpy.uint8(y * 255).reshape(image_shape)
+            target = numpy.uint8(target * 255).reshape(image_shape)
             data.set_images(gid, pid, 0, [y, target])
 
     add(datasets.train_x.get_value(borrow=True),
@@ -119,5 +126,5 @@ def _generate_result(model, datasets, imgh, imgw):
 
 if __name__ == '__main__':
     datasets = _prepare_data(load_from_cache=True, save_to_cache=False)
-    model = _train_model(datasets, load_from_cache=False, save_to_cache=True)
-    _generate_result(model, datasets, imgh=160, imgw=80)
+    model = _train_model(datasets, load_from_cache=False, save_to_cache=False)
+    _generate_result(model, datasets, (160, 80))
