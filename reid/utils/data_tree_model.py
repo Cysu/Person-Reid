@@ -20,7 +20,7 @@ class DataTreeModel(QtCore.QAbstractItemModel):
         self._root = DataTreeNode(["Name", "Size"])
 
         for gid in xrange(data_loader.get_n_groups()):
-            # Get the pedestrian Matrix
+            # Get the pedestrian matrix
             P = data_loader.get_pedes(gid)
 
             # Group node

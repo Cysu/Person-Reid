@@ -34,6 +34,18 @@ class DataLoader(object):
 
         return self._data.shape[0]
 
+    def get_n_pedes_views(self, gid):
+        """Get the number of pedestrians and views in specific group
+
+        Args:
+            gid: The group index
+
+        Returns:
+            A tuple (n_pedes, n_views)
+        """
+
+        return self._data[gid, 0]['pedes'].shape
+
     def get_n_images(self, gid, pid):
         """Get the number of images in each view of a pedestrian
 
@@ -42,7 +54,7 @@ class DataLoader(object):
             pid: The pedestrian index
 
         Returns:
-            A list of integers represents the number of images in each view.
+            A list of integers representing the number of images in each view.
         """
 
         views = self._data[gid, 0]['pedes'][pid, :]
