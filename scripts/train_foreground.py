@@ -8,7 +8,7 @@ import theano.tensor as T
 
 import reid.optimization.sgd as sgd
 from reid.preproc import imageproc
-from reid.datasets.datasets import Datasets
+from reid.datasets import Datasets
 from reid.models.neural_net import NeuralNet
 from reid.models.layers import FullConnLayer
 from reid.models import active_functions as actfuncs
