@@ -61,11 +61,11 @@ class DataLoader(object):
         
         return [v.shape[1] for v in views]
 
-    def get_pedes(self, index):
+    def get_pedes(self, gid):
         """Get the pedestrian data for one group
 
         Args:
-            index: The group index
+            gid: The group index
 
         Returns:
             A m×v numpy matrix `P`, `P(i,j)` is the data array for the `i`-th
@@ -74,7 +74,22 @@ class DataLoader(object):
 
         # TODO: Handle errors
 
-        return self._data[index, 0]['pedes']
+        return self._data[gid, 0]['pedes']
+
+    def get_image(self, gid, pid, vid, k):
+        """Get a single image for given index
+
+        Args:
+            gid: The group index
+            pid: The pedestrian index
+            vid: The view index
+            k: The image index
+
+        Returns:
+            The specific image
+        """
+
+        return self._data[gid][0]['pedes'][pid, vid][0, k]
 
     def get_all_images(self):
         """Get all the images as a list

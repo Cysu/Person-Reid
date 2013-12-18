@@ -8,7 +8,12 @@ from skimage.color import rgb2lab
 from sklearn.preprocessing import MinMaxScaler, Binarizer
 
 def imresize(image, shape):
-    return skimage.transform.resize(image, shape)
+    ret = skimage.transform.resize(image, shape)
+
+    if image.dtype == numpy.uint8:
+        ret = (ret * 255).astype(numpy.uint8)
+    
+    return ret
 
 def subtract_luminance(rgbimg):
     labimg = rgb2lab(rgbimg)

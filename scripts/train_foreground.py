@@ -16,9 +16,9 @@ from reid.models import cost_functions as costfuncs
 from reid.utils.data_manager import DataLoader, DataSaver
 
 
-_cached_datasets = 'cache/foreground_datasets.pkl'
-_cached_model = 'cache/foreground_model.pkl'
-_cached_result = 'cache/foreground_result.mat'
+_cached_datasets = '../cache/foreground_datasets.pkl'
+_cached_model = '../cache/foreground_model.pkl'
+_cached_result = '../cache/foreground_result.mat'
 
 
 def _prepare_data(load_from_cache=False, save_to_cache=False):
@@ -27,8 +27,8 @@ def _prepare_data(load_from_cache=False, save_to_cache=False):
             datasets = cPickle.load(f)
     else:
         # Setup data files
-        image_data = DataLoader('data/parse/cuhk_large_labeled_subsampled.mat', verbose=True)
-        parse_data = DataLoader('data/parse/cuhk_large_labeled_subsampled_parse.mat', verbose=True)
+        image_data = DataLoader('../data/parse/cuhk_large_labeled_subsampled.mat', verbose=True)
+        parse_data = DataLoader('../data/parse/cuhk_large_labeled_subsampled_parse.mat', verbose=True)
 
         images = image_data.get_all_images()
         parses = parse_data.get_all_images()
