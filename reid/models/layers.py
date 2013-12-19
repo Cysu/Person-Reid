@@ -12,19 +12,26 @@ from reid.utils import numpy_rng
 class FullConnLayer(Block):
     """Fully connected layer"""
 
-    def __init__(self, input_size, output_size, active_func=None):
+    def __init__(self, input_size, output_size, active_func=None,
+                 W=None, b=None):
         self._active_func = active_func
 
-        init_W = numpy.asarray(numpy_rng.uniform(
-            low=-4 * numpy.sqrt(6.0 / (input_size + output_size)),
-            high=4 * numpy.sqrt(6.0 / (input_size + output_size)),
-            size=(input_size, output_size)), dtype=theano.config.floatX)
+        if W is None:
+            init_W = numpy.asarray(numpy_rng.uniform(
+                low=-4 * numpy.sqrt(6.0 / (input_size + output_size)),
+                high=4 * numpy.sqrt(6.0 / (input_size + output_size)),
+                size=(input_size, output_size)), dtype=theano.config.floatX)
 
-        self._W = theano.shared(value=init_W, name='W', borrow=True)
+            self._W = theano.shared(value=init_W, name='W', borrow=True)
+        else:
+            self._W = W
 
-        init_b = numpy.zeros(output_size, dtype=theano.config.floatX)
+        if b is None:
+            init_b = numpy.zeros(output_size, dtype=theano.config.floatX)
 
-        self._b = theano.shared(value=init_b, name='b', borrow=True)
+            self._b = theano.shared(value=init_b, name='b', borrow=True)
+        else:
+            self._b = b
 
         self._params = [self._W, self._b]
 

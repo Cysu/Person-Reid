@@ -4,7 +4,7 @@
 import theano.tensor as T
 
 from reid.models.block import Block
-
+from reid.models.layers import FullConnLayer
 
 class NeuralNet(Block):
     """A composition of several blocks"""
@@ -40,3 +40,46 @@ class NeuralNet(Block):
         error = self._error_func(output=y, target=target)
 
         return error
+
+class AutoEncoder(NeuralNet):
+    """Class for auto-encoder
+
+    The auto-encoder has symmetric structure. Each layer is fully connected.
+    """
+
+    def __init__(self, layer_sizes, active_funcs, cost_func, error_func):
+        """Initialize an auto-encoder
+
+        Args:
+            layer_sizes: A list of integers. The first one is the input size.
+            The last one is the middlest layer's size.
+
+            active_funcs: A list of layer-wise active functions.
+        """
+
+        n_layers = len(active_funcs)
+
+        assert n_layers == len(layer_sizes) - 1
+
+        self._cost_func = cost_func
+        self._error_func = error_func
+        self._blocks = []
+
+        self._params = []
+
+        # Build feature extraction layers
+        for i in xrange(n_layers):
+            layer = FullConnLayer(input_size=layer_sizes[i],
+                                  output_size=layer_sizes[i+1],
+                                  active_func=active_funcs[i])
+            self._blocks.append(layer)
+            self._params.extend(layer.parameters)
+
+        # Build reconstruction layers
+        for i in xrange(n_layers-1, -1, -1):
+            layer = FullConnLayer(input_size=layer_sizes[i+1],
+                                  output_size=layer_sizes[i],
+                                  active_func=active_funcs[i],
+                                  W=self._blocks[i].parameters[0].T)
+            self._blocks.append(layer)
+            self._params.append(layer.parameters[1])
