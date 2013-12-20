@@ -20,7 +20,7 @@ def view_repr(group_data):
 
     m, v = group_data.shape
 
-    ret = [0] * v
+    ret = [[] for __ in xrange(v)]
     for pid in xrange(m):
         for vid in xrange(v):
             views_data = group_data[pid, vid]

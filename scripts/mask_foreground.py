@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import cPickle
+import numpy
 import theano
 import theano.tensor as T
 
@@ -9,15 +10,17 @@ from reid.preproc import imageproc
 from reid.utils.data_manager import DataLoader, DataSaver
 
 
-with open('../cache/foreground_model.pkl', 'rb') as f:
-    model, threshold = cPickle.load(f)
+def _mask_dataset():
+    # Load model and compile function
+    with open('../cache/foreground_model.pkl', 'rb') as f:
+        model, threshold = cPickle.load(f)
 
     x = T.matrix('x')
     y = model.get_output(x)
     output_func = theano.function(inputs=[x], outputs=(y >= threshold))
 
-def _mask_dataset(dataset_filename, mask_filename):
-    image_data = DataLoader(dataset_filename, verbose=True)
+    # Load data
+    image_data = DataLoader('../data/cuhk_small.mat', verbose=True)
 
     # Pre-processing
     print "Pre-processing ..."
@@ -56,12 +59,12 @@ def _mask_dataset(dataset_filename, mask_filename):
                     mask = mask.reshape(160, 80, 1)
                     orig_image = image_data.get_image(gid, pid, vid, k)
                     orig_image = imageproc.imresize(orig_image, (160, 80, 3))
-                    view_masks[k] = mask * orig_image
+                    view_masks[k] = (mask * orig_image).astype(numpy.uint8)
                     cur_index += 1
 
                 mask_data.set_images(gid, pid, vid, view_masks)
 
-    mask_data.save(mask_filename)
+    mask_data.save('../data/cuhk_small_masked.mat')
 
-if __name__ == '__main__':
-    _mask_dataset('../data/cuhk_large_detected.mat', '../data/cuhk_large_detected_mask.mat')
+if __name__ == '__main__':    
+    _mask_dataset()
