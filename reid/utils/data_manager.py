@@ -7,6 +7,29 @@ from scipy.io import loadmat, savemat
 from reid import utils
 
 
+def view_repr(group_data):
+    """Represent a group of pedestrian in view-first order
+
+    Args:
+        group_data: Return value of function ``DataLoader.get_pedes``
+
+    Returns:
+        A list, each element is data of a view. The data is represented as a
+        list of ``(pid, image)`` tuple.
+    """
+
+    m, v = group_data.shape
+
+    ret = [0] * v
+    for pid in xrange(m):
+        for vid in xrange(v):
+            views_data = group_data[pid, vid]
+            for k in xrange(views_data.shape[1]):
+                ret[vid].append((pid, views_data[0, k]))
+
+    return ret
+
+
 class DataLoader(object):
     """Data loader (DataLoader)
 
