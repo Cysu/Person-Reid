@@ -62,6 +62,7 @@ def count(distmat, glabels=None, plabels=None, n_selected_labels=None):
         ind = []
         for i, label in enumerate(plabels):
             if label in g: ind.append(i)
+        ind = numpy.asarray(ind)
 
         p = plabels[ind]
 

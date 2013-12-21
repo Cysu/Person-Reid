@@ -13,6 +13,7 @@ from reid.models import active_functions as actfuncs
 from reid.models import cost_functions as costfuncs
 from reid.optimization import sgd
 from reid.utils import data_manager
+from reid.utils import cmc
 from reid.utils.data_manager import DataLoader
 
 
@@ -93,7 +94,7 @@ def _prepare_data(load_from_cache=False, save_to_cache=False):
 def _train_model(datasets, load_from_cache=False, save_to_cache=False):
     if load_from_cache:
         with open(_cached_model, 'rb') as f:
-            model, threshold = cPickle.load(f)
+            model = cPickle.load(f)
     else:
         # Build model
         print "Building model ..."
@@ -103,7 +104,7 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
                             cost_func=costfuncs.mean_square_error,
                             error_func=costfuncs.mean_square_error)
 
-        sgd.train(model, datasets, n_epoch=100, learning_rate=1e-4)
+        sgd.train(model, datasets, n_epoch=100, learning_rate=1e-3)
 
     if save_to_cache:
         with open(_cached_model, 'wb') as f:
@@ -114,8 +115,10 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
 def _get_distance(model, data, load_from_cache=False, save_to_cache=False):
     if load_from_cache:
         with open(_cached_distmat, 'rb') as f:
-            D = cPickle.load(f)
+            D, G, P = cPickle.load(f)
     else:
+        print "Computing distance matrix ..."
+
         x = T.matrix('x')
         y = model.get_output(x)
         output_func = theano.function(inputs=[x], outputs=y)
@@ -133,20 +136,26 @@ def _get_distance(model, data, load_from_cache=False, save_to_cache=False):
 
         for i in xrange(nr):
             for j in xrange(ny):
-                D[i, j] = ((R[i]-D[j])**2).sum()
+                D[i, j] = ((R[i]-Y[j])**2).sum()
+
+        G = numpy.asarray([pid for pid, image in data[0]])
+        P = numpy.asarray([pid for pid, image in data[1]])
 
     if save_to_cache:
         with open(_cached_distmat, 'wb') as f:
-            cPickle.dump(D, f, protocol=cPickle.HIGHEST_PROTOCOL)
+            cPickle.dump((D, G, P), f, protocol=cPickle.HIGHEST_PROTOCOL)
 
-    return D
+    return (D, G, P)
 
 if __name__ == '__main__':
     views_data, datasets = _prepare_data(load_from_cache=True,
                                          save_to_cache=False)
 
-    model = _train_model(datasets, load_from_cache=False, save_to_cache=True)
+    model = _train_model(datasets, load_from_cache=True, save_to_cache=False)
 
-    distmat = _get_distance(model, views_data,
-                            load_from_cache=False,
-                            save_to_cache=True)
+    distmat, glabels, plabels = _get_distance(model, views_data,
+                                              load_from_cache=True,
+                                              save_to_cache=False)
+
+    print cmc.count(distmat, glabels, plabels, 100)
+
