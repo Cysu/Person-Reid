@@ -7,6 +7,7 @@ import skimage.transform
 from skimage.color import rgb2lab
 from sklearn.preprocessing import MinMaxScaler, Binarizer
 
+
 def imresize(image, shape):
     ret = skimage.transform.resize(image, shape)
 
@@ -24,12 +25,14 @@ def subtract_luminance(rgbimg):
     return labimg
 
 def scale_per_channel(img, scale_range):
-    scaler = MinMaxScaler(scale_range, copy=False)
-
     h, w, c = img.shape
-
     img = img.reshape(h*w, c)
+
+    scaler = MinMaxScaler(scale_range, copy=False)
     img = scaler.fit_transform(img)
+
+    print scaler.data_min, scaler.data_range
+
     img = img.reshape(h, w, c)
 
     return img

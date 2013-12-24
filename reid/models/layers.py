@@ -45,6 +45,20 @@ class ConvPoolLayer(Block):
 
     def __init__(self, filter_shape, pool_shape,
                  image_shape=None, active_func=None, flatten_output=False):
+        """Initialize the convolutional and max-pooling layer
+
+        Args:
+            filter_shape: 4D-tensor, (n_filters, n_channels, n_rows, n_cols)
+            pool_shape: 2D-tensor, (n_rows, n_cols)
+            image_shape: None if the input is always 4D-tensor, (n_images, 
+                n_channels, n_rows, n_cols). If the input images are represented
+                as vectors, then a 3D-tensor, (n_channels, n_rows, n_cols) is 
+                required.
+            active_func: Active function of this layer
+            flatten_output: True if the output image should be flattened as a 
+                vector.
+        """
+
         self._filter_shape = filter_shape
         self._pool_shape = pool_shape
         self._image_shape = image_shape
