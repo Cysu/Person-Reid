@@ -104,3 +104,23 @@ class ConvPoolLayer(Block):
             y = y.flatten(2)
 
         return y
+
+
+class HybridLayer(Block):
+    """Hybrid layer combines a list of input data into a long vector"""
+
+    def get_output(self, x):
+        """Get the combined long vector
+
+        Args:
+            x: A list or numpy ndarray. Each item should be a numpy ndarray 
+                representing an input data.
+
+        Returns:
+            A long numpy vector combining all the flattened input data
+        """
+
+        assert type(x) in [list, numpy.ndarray], \
+            "The input of hybrid layer should be either list or numpy.ndarray"
+
+        return numpy.asarray([data.ravel() for data in x]).ravel()
