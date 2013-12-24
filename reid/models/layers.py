@@ -106,8 +106,11 @@ class ConvPoolLayer(Block):
         return y
 
 
-class HybridLayer(Block):
-    """Hybrid layer combines a list of input data into a long vector"""
+class CompLayer(Block):
+    """Composition layer
+
+    Composition layer combines a list of input data into a long vector
+    """
 
     def get_output(self, x):
         """Get the combined long vector
@@ -120,7 +123,42 @@ class HybridLayer(Block):
             A long numpy vector combining all the flattened input data
         """
 
-        assert type(x) in [list, numpy.ndarray], \
-            "The input of hybrid layer should be either list or numpy.ndarray"
-
         return numpy.asarray([data.ravel() for data in x]).ravel()
+
+
+class DecompLayer(Block):
+    """Decomposition layer
+
+    Decomposition layer separate a long vector into a list of output data
+    """
+
+    def __init__(self, data_shapes):
+        """Initialize the decomposition layer
+
+        Args:
+            data_shapes:  A list of tuples representing shapes of each data
+                sample
+        """
+
+        self._data_shapes = data_shapes
+
+        self._segments = [0]
+        for i, shape in enumerate(data_shapes):
+            self._segments.append(self._segments[i] + numpy.prod(shape))
+
+    def get_output(self, x):
+        """Get the separated list of data samples
+
+        Args:
+            x: A long numpy vector
+
+        Returns:
+            A list of data samples
+        """
+
+        ret = []
+        for i, shape in enumerate(self._data_shapes):
+            l, r = self._segments[i], self._segments[i+1]
+            ret.append(x[l:r].reshape(shape))
+
+        return ret
