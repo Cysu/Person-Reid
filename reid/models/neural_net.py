@@ -7,13 +7,23 @@ from reid.models.block import Block
 from reid.models.layers import FullConnLayer
 
 
+def get_cost_updates(model, cost_func, x, target, learning_rate):
+    y = model.get_output(x)
+    cost = cost_func(output=y, target=target)
+    grads = T.grad(cost, model.parameters)
+    updates = [(p, p-learning_rate*g) for p, g in zip(model.parameters, grads)]    
+    return (cost, updates)
+
+def get_error(model, error_func, x, target):
+    y = model.get_output(x)
+    return error_func(output=y, target=target)
+
+
 class NeuralNet(Block):
     """A composition of several blocks"""
 
-    def __init__(self, blocks, cost_func=None, error_func=None):
+    def __init__(self, blocks):
         self._blocks = blocks
-        self._cost_func = cost_func
-        self._error_func = error_func
 
         self._params = []
         for block in blocks:
@@ -25,32 +35,14 @@ class NeuralNet(Block):
             x = y
         return y
 
-    def get_cost_updates(self, x, target, learning_rate):
-        y = self.get_output(x)
-        cost = self._cost_func(output=y, target=target)
-        grads = T.grad(cost, self._params)
-
-        updates = []
-        for p, g in zip(self._params, grads):
-            updates.append((p, p - learning_rate * g))
-
-        return (cost, updates)
-        
-    def get_error(self, x, target):
-        y = self.get_output(x)
-        error = self._error_func(output=y, target=target)
-
-        return error
-
-
+    
 class AutoEncoder(NeuralNet):
     """Class for auto-encoder
 
     The auto-encoder has symmetric structure. Each layer is fully connected.
     """
 
-    def __init__(self, layer_sizes, active_funcs,
-                 cost_func=None, error_func=None):
+    def __init__(self, layer_sizes, active_funcs):
         """Initialize the auto-encoder
 
         Args:
@@ -61,14 +53,9 @@ class AutoEncoder(NeuralNet):
         """
 
         n_layers = len(active_funcs)
-
         assert n_layers == len(layer_sizes) - 1
 
-        self._cost_func = cost_func
-        self._error_func = error_func
-        self._blocks = []
-
-        self._params = []
+        self._blocks, self._params = [], []
 
         # Build feature extraction layers
         for i in xrange(n_layers):
@@ -96,7 +83,7 @@ class MultiwayNeuralNet(Block):
     neural network and thus forms the list of output data.
     """
 
-    def __init__(self, blocks, cost_func=None, error_func=None):
+    def __init__(self, blocks):
         """Initialize the multiway neural network
 
         Args:
@@ -104,8 +91,6 @@ class MultiwayNeuralNet(Block):
         """
 
         self._blocks = blocks
-        self._cost_func = cost_func
-        self._error_func = error_func
 
     def get_output(self, x):
         """Get the list of output data
