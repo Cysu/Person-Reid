@@ -7,7 +7,7 @@ import theano
 import theano.tensor as T
 
 
-def train(model, datasets,
+def train(model, datasets, cost_func, error_func,
           batch_size=10, n_epoch=100, learning_rate=1e-4,
           improvement=1-1e-3, patience_incr=2.0, learning_rate_decr=0.95):
     # Setup parameters
@@ -19,8 +19,10 @@ def train(model, datasets,
     i = T.lscalar('i') # batch index
     alpha = T.scalar('alpha')
 
-    cost, updates = model.get_cost_updates(x, y, alpha)
-    error = model.get_error(x, y)
+    from reid.models.neural_net import get_cost_updates, get_error
+
+    cost, updates = get_cost_updates(model, cost_func, x, y, alpha)
+    error = get_error(model, error_func, x, y)
 
     train_func = theano.function(
         inputs=[i, alpha], outputs=cost, updates=updates,
