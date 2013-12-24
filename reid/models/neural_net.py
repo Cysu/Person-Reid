@@ -6,10 +6,11 @@ import theano.tensor as T
 from reid.models.block import Block
 from reid.models.layers import FullConnLayer
 
+
 class NeuralNet(Block):
     """A composition of several blocks"""
 
-    def __init__(self, blocks, cost_func, error_func):
+    def __init__(self, blocks, cost_func=None, error_func=None):
         self._blocks = blocks
         self._cost_func = cost_func
         self._error_func = error_func
@@ -41,14 +42,16 @@ class NeuralNet(Block):
 
         return error
 
+
 class AutoEncoder(NeuralNet):
     """Class for auto-encoder
 
     The auto-encoder has symmetric structure. Each layer is fully connected.
     """
 
-    def __init__(self, layer_sizes, active_funcs, cost_func, error_func):
-        """Initialize an auto-encoder
+    def __init__(self, layer_sizes, active_funcs,
+                 cost_func=None, error_func=None):
+        """Initialize the auto-encoder
 
         Args:
             layer_sizes: A list of integers. The first one is the input size.
@@ -83,3 +86,40 @@ class AutoEncoder(NeuralNet):
                                   W=self._blocks[i].parameters[0].T)
             self._blocks.append(layer)
             self._params.append(layer.parameters[1])
+
+
+class MultiwayNeuralNet(Block):
+    """Multiway neural network
+
+    The multiway neural network consists of several parallel typical neural 
+    networks. It receives a list of input data. Each is passed through a typcial
+    neural network and thus forms the list of output data.
+    """
+
+    def __init__(self, blocks, cost_func=None, error_func=None):
+        """Initialize the multiway neural network
+
+        Args:
+            blocks: A list of parallel typical neural networks
+        """
+
+        self._blocks = blocks
+        self._cost_func = cost_func
+        self._error_func = error_func
+
+    def get_output(self, x):
+        """Get the list of output data
+
+        Args:
+            x: A list or numpy ndarray. Each item should be a numpy ndarray 
+                representing an input data.
+
+        Returns:
+            A list of output data
+        """
+
+        ret = []
+        for data, block in zip(x, self._blocks):
+            ret.append(block.get_output(data))
+
+        return ret
