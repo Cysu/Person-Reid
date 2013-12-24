@@ -10,6 +10,13 @@ from reid.preproc import imageproc
 from reid.utils.data_manager import DataLoader, DataSaver
 
 
+def _input_preproc(image):
+    image = imageproc.imresize(image, (160, 80, 3))
+    image = imageproc.subtract_luminance(image)
+    image = imageproc.scale_per_channel(image, [0, 1])
+    image = numpy.rollaxis(image, 2)
+    return image
+
 def _mask_dataset():
     # Load model and compile function
     with open('../cache/foreground_model.pkl', 'rb') as f:
@@ -26,12 +33,7 @@ def _mask_dataset():
     print "Pre-processing ..."
 
     images = image_data.get_all_images()
-    for i, image in enumerate(images):
-        image = imageproc.imresize(image, (160, 80, 3))
-        image = imageproc.subtract_luminance(image)
-        image = imageproc.scale_per_channel(image, [0, 1])
-        images[i] = image
-
+    images = [_input_preproc(image) for image in images]
     images = imageproc.images2mat(images).astype(theano.config.floatX)
 
     # Compute masks
