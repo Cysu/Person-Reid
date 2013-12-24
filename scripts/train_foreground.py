@@ -18,8 +18,18 @@ from reid.utils.data_manager import DataLoader, DataSaver
 
 _cached_datasets = '../cache/foreground_datasets.pkl'
 _cached_model = '../cache/foreground_model.pkl'
-_cached_result = '../cache/foreground_result.mat'
+_cached_output = '../cache/foreground_output.mat'
 
+
+def _input_preproc(image):
+    image = imageproc.subtract_luminance(image)
+    image = imageproc.scale_per_channel(image, [0, 1])
+    image = numpy.rollaxis(image, 2)
+    return image
+
+def _target_preproc(image):
+    image = imageproc.binarize(image, 0)
+    return image
 
 def _prepare_data(load_from_cache=False, save_to_cache=False):
     if load_from_cache:
@@ -27,32 +37,30 @@ def _prepare_data(load_from_cache=False, save_to_cache=False):
             datasets = cPickle.load(f)
     else:
         # Setup data files
-        image_data = DataLoader('../data/parse/cuhk_large_labeled_subsampled.mat', verbose=True)
-        parse_data = DataLoader('../data/parse/cuhk_large_labeled_subsampled_parse.mat', verbose=True)
+        input_data = DataLoader(
+            '../data/parse/cuhk_large_labeled_subsampled.mat',
+            verbose=True)
 
-        images = image_data.get_all_images()
-        parses = parse_data.get_all_images()
+        target_data = DataLoader(
+            '../data/parse/cuhk_large_labeled_subsampled_parse.mat',
+            verbose=True)
+
+        input_images = input_data.get_all_images()
+        target_images = target_data.get_all_images()
 
         # Pre-processing
         print "Pre-processing ..."
 
-        for i, image in enumerate(images):
-            image = imageproc.subtract_luminance(image)
-            image = imageproc.scale_per_channel(image, [0, 1])
-            images[i] = image
+        inputs = [_input_preproc(image) for image in input_images]
+        inputs = imageproc.images2mat(inputs)
 
-        images = imageproc.images2mat(images)
-
-        for i, parse in enumerate(parses):
-            parse = imageproc.binarize(parse, 0)
-            parses[i] = parse
-
-        parses = imageproc.images2mat(parses)
+        targets = [_target_preproc(image) for image in target_images]
+        targets = imageproc.images2mat(targets)
 
         # Prepare the datasets
         print "Prepare the datasets ..."
         
-        datasets = Datasets(images, parses)
+        datasets = Datasets(inputs, targets)
         datasets.split(train_ratio=0.5, valid_ratio=0.3)
 
     if save_to_cache:
@@ -89,7 +97,7 @@ def _choose_threshold(model, datasets, verbose=False):
         if threshold == -1 and tpr >= 0.9: threshold = t
     
     if verbose:
-        import matplotlib.pyplot as pyplot
+        from matplotlib import pyplot
 
         print roc
         roc = numpy.asarray(roc)
@@ -111,27 +119,29 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
         layers = [FullConnLayer(input_size=38400,
                                 output_size=1024,
                                 active_func=actfuncs.sigmoid),
-
+        
                   FullConnLayer(input_size=1024,
                                 output_size=12800,
                                 active_func=actfuncs.sigmoid)]
 
-        model = NeuralNet(layers,
-                          cost_func=costfuncs.mean_binary_cross_entropy,
-                          error_func=costfuncs.mean_binary_cross_entropy)
+        model = NeuralNet(layers)
 
-        sgd.train(model, datasets, n_epoch=100, learning_rate=1e-3)
+        sgd.train(model, datasets,
+                  cost_func=costfuncs.mean_binary_cross_entropy,
+                  error_func=costfuncs.mean_binary_cross_entropy,
+                  n_epoch=100, learning_rate=1e-3)
 
         threshold = _choose_threshold(model, datasets, verbose=False)
 
     if save_to_cache:
         with open(_cached_model, 'wb') as f:
-            cPickle.dump((model, threshold), f, protocol=cPickle.HIGHEST_PROTOCOL)
+            cPickle.dump((model, threshold), f,
+                         protocol=cPickle.HIGHEST_PROTOCOL)
 
     return (model, threshold)
 
 
-def _generate_result(model, datasets, image_shape, threshold):
+def _generate_result(model, threshold, datasets, image_shape):
     # For convenience, we will save the result in our data format.
     # Regard train, valid, and test sets as three groups.
     # Each pedestrian only has one view, containing output and target images.
@@ -162,9 +172,14 @@ def _generate_result(model, datasets, image_shape, threshold):
     add(datasets.test_x.get_value(borrow=True),
         datasets.test_y.get_value(borrow=True))
 
-    data.save(_cached_result)
+    data.save(_cached_output)
 
 if __name__ == '__main__':
-    datasets = _prepare_data(load_from_cache=True, save_to_cache=False)
-    model, threshold = _train_model(datasets, load_from_cache=False, save_to_cache=True)
-    _generate_result(model, datasets, (160, 80), threshold)
+    datasets = _prepare_data(load_from_cache=False,
+                             save_to_cache=True)
+
+    model, threshold = _train_model(datasets,
+                                    load_from_cache=False,
+                                    save_to_cache=True)
+
+    _generate_result(model, threshold, datasets, (160, 80))
