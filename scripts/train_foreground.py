@@ -119,7 +119,7 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
         layers = [FullConnLayer(input_size=38400,
                                 output_size=1024,
                                 active_func=actfuncs.sigmoid),
-        
+
                   FullConnLayer(input_size=1024,
                                 output_size=12800,
                                 active_func=actfuncs.sigmoid)]
@@ -129,7 +129,7 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
         sgd.train(model, datasets,
                   cost_func=costfuncs.mean_binary_cross_entropy,
                   error_func=costfuncs.mean_binary_cross_entropy,
-                  n_epoch=100, learning_rate=1e-3)
+                  n_epoch=100, learning_rate=1e-3, learning_rate_decr=1.0)
 
         threshold = _choose_threshold(model, datasets, verbose=False)
 

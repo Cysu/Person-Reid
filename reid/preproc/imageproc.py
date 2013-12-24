@@ -31,11 +31,7 @@ def scale_per_channel(img, scale_range):
     scaler = MinMaxScaler(scale_range, copy=False)
     img = scaler.fit_transform(img)
 
-    print scaler.data_min, scaler.data_range
-
-    img = img.reshape(h, w, c)
-
-    return img
+    return img.reshape(h, w, c)
 
 def binarize(img, threshold):
     binarizer = Binarizer(threshold, copy=False)
