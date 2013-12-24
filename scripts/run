@@ -14,7 +14,7 @@ if [ $# -eq 0 ]; then
     print_usage
 else
     if [ $1 == "viewer" ]; then
-        python2 reid/utils/data_viewer.py
+        python2 ../reid/utils/data_viewer.py
     else
         print_usage
     fi
