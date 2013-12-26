@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import os
+import shelve
 from PySide import QtGui, QtCore
 from PySide.QtCore import Qt
 
@@ -69,6 +71,9 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
 
+        # Store temporary configurations
+        self._cpath = os.path.join(QtCore.QDir.homePath(), '.dataviewer.db')
+
         self._set_codec("UTF-8")
 
         self._cur_pid = None
@@ -84,13 +89,14 @@ class MainWindow(QtGui.QMainWindow):
 
     def open(self):
         fpath, __ = QtGui.QFileDialog.getOpenFileName(self, "Open File",
-            QtCore.QDir.homePath(), "Matlab File (*.mat)")
+            self._prevdir, "Matlab File (*.mat)")
 
         if not fpath: return
 
+        self._prevdir = QtCore.QFileInfo(fpath).absolutePath()
+
         # TODO: Handle errors
-        # Convert QString into Python String
-        self._data = DataLoader(str(fpath), verbose=True)
+        self._data = DataLoader(fpath, verbose=True)
 
         # TODO: Check if we should manually delete it
         self._tree_dock = QtGui.QTreeView(self._dock)
@@ -150,6 +156,19 @@ class MainWindow(QtGui.QMainWindow):
             prev_index = self._cur_index.sibling(self._cur_pid, 0)
             self._tree_dock.setCurrentIndex(prev_index)
             self._cur_index = prev_index
+
+    @property
+    def _prevdir(self):
+        d = shelve.open(self._cpath)
+        ret = d['prevdir'] if 'prevdir' in d else QtCore.QDir.homePath()
+        d.close()
+        return ret
+
+    @_prevdir.setter
+    def _prevdir(self, prevdir):
+        d = shelve.open(self._cpath)
+        d['prevdir'] = prevdir
+        d.close()
 
     def _set_codec(self, codec_name):
         codec = QtCore.QTextCodec.codecForName(codec_name)
