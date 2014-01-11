@@ -7,6 +7,14 @@ import skimage.transform
 from skimage.color import rgb2lab
 from sklearn.preprocessing import MinMaxScaler, Binarizer
 
+def imtranslate(image, translation):
+    trans = skimage.transform.AffineTransform(translation=translation)
+    ret = skimage.transform.warp(image, trans.inverse)
+
+    if image.dtype == numpy.uint8:
+        ret = (ret * 255).astype(numpy.uint8)
+
+    return ret
 
 def imresize(image, shape):
     ret = skimage.transform.resize(image, shape)
