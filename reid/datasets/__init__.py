@@ -7,11 +7,22 @@ import theano
 
 class Datasets(object):
 
-    def __init__(self, X, Y):
-        assert X.shape[0] == Y.shape[0]
+    def __init__(self, X=None, Y=None, train_set=None, valid_set=None, test_set=None):
+        if X is not None and Y is not None:
+            self.X = X
+            self.Y = Y
+        elif train_set is not None and valid_set is not None and test_set is not None:
+            self.X = numpy.vstack((train_set[0], valid_set[0], test_set[0]))
+            self.Y = numpy.vstack((train_set[1], valid_set[1], test_set[1]))
 
-        self.X = X
-        self.Y = Y
+            self.train_x = self._create_shared(train_set[0])
+            self.train_y = self._create_shared(train_set[1])
+            self.valid_x = self._create_shared(valid_set[0])
+            self.valid_y = self._create_shared(valid_set[1])
+            self.test_x = self._create_shared(test_set[0])
+            self.test_y = self._create_shared(test_set[1])
+        else:
+            raise ValueError("Invalid argument combination")
 
     def split(self, train_ratio, valid_ratio):
         m = self.X.shape[0]

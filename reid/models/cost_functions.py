@@ -11,4 +11,9 @@ def mean_square_error(output, target):
     return ((output - target) ** 2).sum(axis=1).mean()
 
 def mean_negative_loglikelihood(output, target):
-    return -T.log(output)[T.arange(target.shape[0]), target.astype('int32')].mean()
+    target = target.astype('int32').ravel()
+    return -T.mean(T.log(output)[T.arange(target.shape[0]), target])
+
+def mean_number_misclassified(output, target):
+    pred = T.argmax(output, axis=1, keepdims=True)
+    return T.neq(pred, target).mean()

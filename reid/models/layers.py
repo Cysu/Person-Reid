@@ -6,6 +6,7 @@ import theano
 import theano.tensor as T
 
 from reid.models.block import Block
+from reid.models import active_functions as actfuncs
 from reid.utils import numpy_rng
 
 
@@ -17,19 +18,22 @@ class FullConnLayer(Block):
         self._active_func = active_func
 
         if W is None:
+            W_bound = numpy.sqrt(6.0 / (input_size + output_size))
+
+            if active_func == actfuncs.sigmoid: W_bound *= 4
+
             init_W = numpy.asarray(numpy_rng.uniform(
-                low=-4 * numpy.sqrt(6.0 / (input_size + output_size)),
-                high=4 * numpy.sqrt(6.0 / (input_size + output_size)),
+                low=-W_bound, high=W_bound,
                 size=(input_size, output_size)), dtype=theano.config.floatX)
 
-            self._W = theano.shared(value=init_W, name='W', borrow=True)
+            self._W = theano.shared(value=init_W, borrow=True)
         else:
             self._W = W
 
         if b is None:
             init_b = numpy.zeros(output_size, dtype=theano.config.floatX)
 
-            self._b = theano.shared(value=init_b, name='b', borrow=True)
+            self._b = theano.shared(value=init_b, borrow=True)
         else:
             self._b = b
 
@@ -68,16 +72,19 @@ class ConvPoolLayer(Block):
         fan_in = numpy.prod(filter_shape[1:])
         fan_out = filter_shape[0] * numpy.prod(filter_shape[2:]) / numpy.prod(pool_shape)
 
+        W_bound = numpy.sqrt(6.0 / (fan_in + fan_out))
+
+        if active_func == actfuncs.sigmoid: W_bound *= 4
+
         init_W = numpy.asarray(numpy_rng.uniform(
-            low=-4 * numpy.sqrt(6.0 / (fan_in + fan_out)),
-            high=4 * numpy.sqrt(6.0 / (fan_in + fan_out)),
+            low=-W_bound, high=W_bound,
             size=filter_shape), dtype=theano.config.floatX)
 
-        self._W = theano.shared(value=init_W, name='W', borrow=True)
+        self._W = theano.shared(value=init_W, borrow=True)
 
         init_b = numpy.zeros((filter_shape[0],), dtype=theano.config.floatX)
 
-        self._b = theano.shared(value=init_b, name='b', borrow=True)
+        self._b = theano.shared(value=init_b, borrow=True)
 
         self._params = [self._W, self._b]
 
