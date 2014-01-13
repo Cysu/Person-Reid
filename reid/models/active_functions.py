@@ -13,4 +13,6 @@ def rectifier(x):
 
 sigmoid = T.nnet.sigmoid
 
+softmax = T.nnet.softmax
+
 tanh = T.tanh
