@@ -16,12 +16,71 @@ def imtranslate(image, translation):
 
     return ret
 
-def imresize(image, shape):
-    ret = skimage.transform.resize(image, shape)
+def imresize(image, shape, keep_ratio=False):
+    """Resize an image to desired shape
+
+    Args:
+        image: A numpy 2d/3d array
+        shape: A tuple (h, w) representing the desired height and width
+        keep_ratio:
+            False: The image will be stretched
+            'height': The original height/weight ratio will be reserved. Image
+                will be scaled to the desired height. Extra columns will be
+                either truncated or filled with zero.
+            'width': The original height/weight ratio will be reserved. Image
+                will be scaled to the desired width. Extra rows will be either
+                truncated or filled with zero.
+    """
+
+    if image.ndim == 3:
+        shape += (image.shape[2],)
+    elif image.ndim != 2:
+        raise ValueError("Invalid image dimension")
+
+    if keep_ratio == False:
+        ret = skimage.transform.resize(image, shape)
+    elif keep_ratio == 'height':
+        scale = shape[0] * 1.0 / image.shape[0]
+        image = skimage.transform.rescale(image, scale)
+        width = image.shape[1]
+
+        if width >= shape[1]:
+            l = (width - shape[1]) // 2
+            if image.ndim == 3:
+                ret = image[:, l:shape[1]+l, :]
+            elif image.ndim == 2:
+                ret = image[:, l:shape[1]+l]
+        else:
+            l = (shape[1] - width) // 2
+            ret = numpy.zeros(shape)
+            if image.ndim == 3:
+                ret[:, l:width+l, :] = image
+            elif image.ndim == 2:
+                ret[:, l:width+l] = image
+    elif keep_ratio == 'width':
+        scale = shape[1] * 1.0 / image.shape[1]
+        image = skimage.transform.rescale(image, scale)
+        height = image.shape[0]
+
+        if height >= shape[0]:
+            l = (height - shape[0]) // 2
+            if image.ndim == 3:
+                ret = image[l:shape[0]+l, :, :]
+            elif image.ndim == 2:
+                ret = image[l:shape[0]+l, :]
+        else:
+            l = (shape[0] - height) // 2
+            ret = numpy.zeros(shape)
+            if image.ndim == 3:
+                ret[l:height+l, :, :] = image
+            elif image.ndim == 2:
+                ret[l:height+l, :] = image
+    else:
+        raise ValueError("Invalid argument ``keep_ratio``")
 
     if image.dtype == numpy.uint8:
         ret = (ret * 255).astype(numpy.uint8)
-    
+
     return ret
 
 def subtract_luminance(rgbimg):
