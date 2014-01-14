@@ -17,3 +17,7 @@ def mean_negative_loglikelihood(output, target):
 def mean_number_misclassified(output, target):
     pred = T.argmax(output, axis=1, keepdims=True)
     return T.neq(pred, target).mean()
+
+def mean_zeroone_error_rate(output, target):
+    pred = T.round(output)
+    return T.neq(pred, target).mean(axis=0)

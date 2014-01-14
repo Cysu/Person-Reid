@@ -116,11 +116,12 @@ def _select_group(images, attributes, group, gtype, load_from_cache=False, save_
         attr_id = [attribute_names.index(name) for name in group]
         attributes = [attr[attr_id] for attr in attributes]
 
-        judge_func = lambda x: x.sum() == 1 if gtype == 'unique' else \
-                     lambda x: x.sum() == 0
-
-        select_func = lambda x: numpy.where(x == 1)[0] if gtype == 'unique' else \
-                      lambda x: x
+        if gtype == 'unique':
+            judge_func = lambda x: x.sum() == 1
+            select_func = lambda x: numpy.where(x == 1)[0]
+        else:
+            judge_func = lambda x: x.sum() != 0
+            select_func = lambda x: x
 
         selected_images = []
         selected_attributes = []
@@ -173,9 +174,12 @@ def _train_model(nndata, load_from_cache=False, save_to_cache=True):
         model = NeuralNet(layers)
 
         sgd.train(model, nndata,
-                  costfuncs.mean_negative_loglikelihood,
-                  costfuncs.mean_number_misclassified,
-                  batch_size=500, n_epoch=200, learning_rate=1e-1, learning_rate_decr=1.0)
+                  costfuncs.mean_binary_cross_entropy,
+                  costfuncs.mean_zeroone_error_rate,
+                  regularize=1e-2,
+                  batch_size=500, n_epoch=200,
+                  learning_rate=1e-1, momentum=0.9,
+                  learning_rate_decr=0.95)
 
     if save_to_cache:
         with open(_cached_model, 'wb') as f:
