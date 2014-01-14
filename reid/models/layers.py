@@ -43,6 +43,9 @@ class FullConnLayer(Block):
         z = T.dot(x, self._W) + self._b
         return z if self._active_func is None else self._active_func(z)
 
+    def get_regularization(self, l):
+        return self._W.norm(l)
+
 
 class ConvPoolLayer(Block):
     """Convolutional and max-pooling layer"""
@@ -111,6 +114,9 @@ class ConvPoolLayer(Block):
             y = y.flatten(2)
 
         return y
+
+    def get_regulariation(self, l):
+        return self._W.norm(l)
 
 
 class CompLayer(Block):

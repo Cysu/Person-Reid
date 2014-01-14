@@ -18,3 +18,6 @@ class Block(object):
 
     def get_output(self, x):
         raise NotImplementedError
+
+    def get_regularization(self, l):
+        return 0

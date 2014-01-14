@@ -9,9 +9,12 @@ from reid.models.block import Block
 from reid.models.layers import FullConnLayer
 
 
-def get_cost_updates(model, cost_func, x, target, learning_rate, momentum=0):
+def get_cost_updates(model, cost_func, x, target, learning_rate, regularize=0, momentum=0):
     y = model.get_output(x)
     cost = cost_func(output=y, target=target)
+    if regularize > 0:
+        cost += regularize * model.get_regularization(2)  # Use 2-norm by default
+
     grads = T.grad(cost, model.parameters)
 
     if momentum == 0:
@@ -47,6 +50,9 @@ class NeuralNet(Block):
             y = block.get_output(x)
             x = y
         return y
+
+    def get_regularization(self, l):
+        return sum([block.get_regularization(l) for block in self._blocks])
 
     
 class AutoEncoder(NeuralNet):
@@ -116,8 +122,7 @@ class MultiwayNeuralNet(Block):
             A list of output data
         """
 
-        ret = []
-        for data, block in zip(x, self._blocks):
-            ret.append(block.get_output(data))
+        return [block.get_output(data) for data, block in zip(x, self._blocks)]
 
-        return ret
+    def get_regularization(self, l):
+        return sum([block.get_regularization(l) for block in self._blocks])
