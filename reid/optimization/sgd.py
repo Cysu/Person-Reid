@@ -8,7 +8,7 @@ import theano.tensor as T
 
 
 def train(model, datasets, cost_func, error_func,
-          batch_size=10, n_epoch=100, learning_rate=1e-4,
+          batch_size=10, n_epoch=100, learning_rate=1e-4, momentum=0,
           improvement=1-1e-3, patience_incr=2.0, learning_rate_decr=0.95):
     # Setup parameters
     n_batches = datasets.get_train_size() / batch_size
@@ -21,7 +21,7 @@ def train(model, datasets, cost_func, error_func,
 
     from reid.models.neural_net import get_cost_updates, get_error
 
-    cost, updates = get_cost_updates(model, cost_func, x, y, alpha)
+    cost, updates = get_cost_updates(model, cost_func, x, y, alpha, momentum)
     error = get_error(model, error_func, x, y)
 
     train_func = theano.function(
@@ -76,6 +76,9 @@ def train(model, datasets, cost_func, error_func,
                 if (cur_iter + 1) % valid_freq == 0:
                     valid_error = valid_func()
                     print "[valid] error {0}".format(valid_error)
+
+                    if type(valid_error) is numpy.ndarray:
+                        valid_error = valid_error.mean()
 
                     # test
                     if valid_error < best_valid_error:

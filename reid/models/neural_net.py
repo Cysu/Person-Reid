@@ -1,17 +1,30 @@
 #!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
+import numpy
+import theano
 import theano.tensor as T
 
 from reid.models.block import Block
 from reid.models.layers import FullConnLayer
 
 
-def get_cost_updates(model, cost_func, x, target, learning_rate):
+def get_cost_updates(model, cost_func, x, target, learning_rate, momentum=0):
     y = model.get_output(x)
     cost = cost_func(output=y, target=target)
     grads = T.grad(cost, model.parameters)
-    updates = [(p, p-learning_rate*g) for p, g in zip(model.parameters, grads)]    
+
+    if momentum == 0:
+        updates = [(p, p-learning_rate*g) for p, g in zip(model.parameters, grads)]
+    else:
+        prev_grads = [theano.shared(numpy.zeros(p.get_value(borrow=True).shape,
+            dtype=p.dtype), borrow=True) for p in model.parameters]
+
+        updates = []
+        for param, grad, prev_grad in zip(model.parameters, grads, prev_grads):
+            updates.append((param, param - learning_rate*(grad + momentum*prev_grad)))
+            updates.append((prev_grad, grad))
+
     return (cost, updates)
 
 def get_error(model, error_func, x, target):
