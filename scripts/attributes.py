@@ -95,8 +95,9 @@ def _preproc(images, attributes, load_from_cache=False, save_to_cache=False):
     else:
         for i, image in enumerate(images):
             image = imageproc.imresize(image, (80, 40), keep_ratio='height')
+            image = imageproc.subtract_luminance(image)
             image = numpy.rollaxis(image, 2)
-            images[i] = image.astype(numpy.float32) / 255.0
+            images[i] = numpy.tanh(image)
 
     if save_to_cache:
         with open(_cached_preproc, 'wb') as f:
@@ -167,7 +168,7 @@ def _train_model(nndata, load_from_cache=False, save_to_cache=True):
         layers = [ConvPoolLayer((20,3,5,5), (2,2), (3,80,40), actfuncs.tanh, False),
                   ConvPoolLayer((50,20,5,5), (2,2), None, actfuncs.tanh, True),
                   FullConnLayer(5950, 500, actfuncs.tanh),
-                  FullConnLayer(500, 7, actfuncs.softmax)]
+                  FullConnLayer(500, 2, actfuncs.softmax)]
 
         model = NeuralNet(layers)
 
@@ -200,9 +201,9 @@ if __name__ == '__main__':
     # images, attributes = _augment(images, attributes, True, False)
 
     images, attributes = _preproc(images, attributes, True, False)
-    images, attributes = _select_group(images, attributes, unique_groups[1], 'unique', False, True)
+    images, attributes = _select_group(images, attributes, unique_groups[2], 'unique', True, False)
 
-    nndata = _form_nndata(images, attributes, False, True)
+    nndata = _form_nndata(images, attributes, True, False)
 
     model = _train_model(nndata, False, True)
 
