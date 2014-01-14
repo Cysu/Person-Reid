@@ -174,8 +174,8 @@ def _train_model(nndata, load_from_cache=False, save_to_cache=True):
         model = NeuralNet(layers)
 
         sgd.train(model, nndata,
-                  costfuncs.mean_binary_cross_entropy,
-                  costfuncs.mean_zeroone_error_rate,
+                  costfuncs.mean_negative_loglikelihood,
+                  costfuncs.mean_number_misclassified,
                   regularize=1e-2,
                   batch_size=500, n_epoch=200,
                   learning_rate=1e-1, momentum=0.9,
