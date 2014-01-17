@@ -9,10 +9,11 @@ from reid.datasets import Datasets
 from reid.preproc import imageproc
 from reid.preproc.augment import aug_translation
 from reid.models.layers import FullConnLayer, ConvPoolLayer
-from reid.models.neural_net import NeuralNet, AutoEncoder
+from reid.models.neural_net import NeuralNet
 from reid.models import active_functions as actfuncs
 from reid.models import cost_functions as costfuncs
 from reid.optimization import sgd
+from reid.utils.data_manager import DataSaver
 
 
 attribute_names = ["accessoryFaceMask", "accessoryHairBand", "accessoryHat", "accessoryHeadphone", "accessoryKerchief", "accessoryMuffler", "accessoryNothing", "accessorySunglasses", "carryingBabyBuggy", "carryingBackpack", "carryingFolder", "carryingLuggageCase", "carryingMessengerBag", "carryingNothing", "carryingOther", "carryingPlasticBags", "carryingSuitcase", "carryingUmbrella", "footwearBlack", "footwearBlue", "footwearBoots", "footwearBrown", "footwearGreen", "footwearGrey", "footwearLeatherShoes", "footwearOrange", "footwearPink", "footwearRed", "footwearSandals", "footwearShoes", "footwearSneakers", "footwearStocking", "footwearWhite", "footwearYellow", "hairBald", "hairBlack", "hairBrown", "hairGrey", "hairLong", "hairOrange", "hairRed", "hairShort", "hairWhite", "hairYellow", "lowerBodyBlack", "lowerBodyBlue", "lowerBodyBrown", "lowerBodyCapri", "lowerBodyCasual", "lowerBodyFormal", "lowerBodyGreen", "lowerBodyGrey", "lowerBodyJeans", "lowerBodyLongSkirt", "lowerBodyOrange", "lowerBodyPink", "lowerBodyPlaid", "lowerBodyPurple", "lowerBodyRed", "lowerBodyShortSkirt", "lowerBodyShorts", "lowerBodySuits", "lowerBodyThickStripes", "lowerBodyTrousers", "lowerBodyWhite", "lowerBodyYellow", "personalFemale", "personalLarger60", "personalLess15", "personalLess30", "personalLess45", "personalLess60", "personalMale", "upperBodyBlack", "upperBodyBlue", "upperBodyBrown", "upperBodyCasual", "upperBodyFormal", "upperBodyGreen", "upperBodyGrey", "upperBodyJacket", "upperBodyLogo", "upperBodyLongSleeve", "upperBodyNoSleeve", "upperBodyOrange", "upperBodyOther", "upperBodyPink", "upperBodyPlaid", "upperBodyPurple", "upperBodyRed", "upperBodyShortSleeve", "upperBodySuit", "upperBodySweater", "upperBodyThickStripes", "upperBodyThinStripes", "upperBodyTshirt", "upperBodyVNeck", "upperBodyWhite", "upperBodyYellow"]
@@ -41,6 +42,7 @@ _cached_preproc = os.path.join('..', 'cache', 'attributes_preproc.pkl')
 _cached_group = os.path.join('..', 'cache', 'attributes_group.pkl')
 _cached_nndata = os.path.join('..', 'cache', 'attributes_nndata.pkl')
 _cached_model = os.path.join('..', 'cache', 'attributes_model.pkl')
+_cached_output = os.path.join('..', 'cache', 'attributes_output.mat')
 
 def _load_datasets(dataset_names, load_from_cache=False, save_to_cache=False):
     print "Loading Datasets ..."
@@ -85,6 +87,12 @@ def _augment(images, attributes, load_from_cache=False, save_to_cache=False):
 
     return (images, attributes)
 
+def _preproc_func(image):
+    image = imageproc.imresize(image, (80, 40), keep_ratio='height')
+    image = imageproc.subtract_luminance(image)
+    image = numpy.rollaxis(image, 2)
+    return numpy.tanh(image)
+
 def _preproc(images, attributes, load_from_cache=False, save_to_cache=False):
     print "Preprocessing ..."
     print "================="
@@ -93,11 +101,7 @@ def _preproc(images, attributes, load_from_cache=False, save_to_cache=False):
         with open(_cached_preproc, 'rb') as f:
             images, attributes = cPickle.load(f)
     else:
-        for i, image in enumerate(images):
-            image = imageproc.imresize(image, (80, 40), keep_ratio='height')
-            image = imageproc.subtract_luminance(image)
-            image = numpy.rollaxis(image, 2)
-            images[i] = numpy.tanh(image)
+        images = [_preproc_func(img) for img in images]
 
     if save_to_cache:
         with open(_cached_preproc, 'wb') as f:
@@ -187,6 +191,33 @@ def _train_model(nndata, load_from_cache=False, save_to_cache=True):
 
     return model
 
+def _generate_output(model, data, orig_images):
+    import theano
+    import theano.tensor as T
+
+    x = T.matrix()
+    f = theano.function(inputs=[x], outputs=T.argmax(model.get_output(x), axis=1))
+
+    wrong, right = [], []
+    for i in xrange(data.X.shape[0]):
+        y = f(data.X[i:(i+1)].astype(theano.config.floatX))
+        if y == data.Y[i]: right.append(orig_images[i])
+        else: wrong.append(orig_images[i])
+
+    data = DataSaver()
+
+    def add(images):
+        m = len(images)
+        gid = data.add_group(m, 1)
+
+        for pid in xrange(m):
+            data.set_images(gid, pid, 0, [images[pid]])
+
+    add(wrong)
+    add(right)
+
+    data.save(_cached_output)
+
 if __name__ == '__main__':
     dataset_names = [
         'prid',
@@ -201,13 +232,15 @@ if __name__ == '__main__':
         'SARC3D'
     ]
 
-    images, attributes = _load_datasets(dataset_names, True, False)
+    orig_images, orig_attributes = _load_datasets(dataset_names, True, False)
     # images, attributes = _augment(images, attributes, True, False)
 
-    images, attributes = _preproc(images, attributes, True, False)
+    images, attributes = _preproc(orig_images, orig_attributes, True, False)
     images, attributes = _select_group(images, attributes, unique_groups[2], 'unique', True, False)
 
     nndata = _form_nndata(images, attributes, True, False)
 
-    model = _train_model(nndata, False, True)
+    model = _train_model(nndata, True, False)
+
+    _generate_output(model, nndata, orig_images)
 

@@ -141,7 +141,7 @@ def _train_model(datasets, load_from_cache=False, save_to_cache=False):
     return (model, threshold)
 
 
-def _generate_result(model, threshold, datasets, image_shape):
+def _generate_output(model, threshold, datasets, image_shape):
     # For convenience, we will save the result in our data format.
     # Regard train, valid, and test sets as three groups.
     # Each pedestrian only has one view, containing output and target images.
@@ -182,4 +182,4 @@ if __name__ == '__main__':
                                     load_from_cache=False,
                                     save_to_cache=True)
 
-    _generate_result(model, threshold, datasets, (160, 80))
+    _generate_output(model, threshold, datasets, (160, 80))
