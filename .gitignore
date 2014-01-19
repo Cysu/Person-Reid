@@ -40,4 +40,9 @@ nosetests.xml
 
 # Project specific
 *.mat
+*.mex*
 *.pkl
+*.png
+*.jpg
+*.jpeg
+*.bmp
