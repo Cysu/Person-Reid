@@ -43,6 +43,14 @@ class Datasets(object):
         self.test_x = self._create_shared(self.X[test_ind, :])
         self.test_y = self._create_shared(self.Y[test_ind, :])
 
+    def add_train_data(self, x, y):
+        self.train_x = numpy.vstack((self.train_x.get_value(borrow=True), x));
+        self.train_y = numpy.vstack((self.train_y.get_value(borrow=True), y));
+        numpy.random.shuffle(self.train_x)
+        numpy.random.shuffle(self.train_y)
+        self.train_x = self._create_shared(self.train_x);
+        self.train_y = self._create_shared(self.train_y);
+
     def get_train_size(self):
         return self.train_x.get_value(borrow=True).shape[0]
 

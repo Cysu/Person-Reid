@@ -9,7 +9,8 @@ import theano.tensor as T
 
 def train(model, datasets, cost_func, error_func, regularize=0,
           batch_size=10, n_epoch=100, learning_rate=1e-4, momentum=0,
-          improvement=1-1e-3, patience_incr=2.0, learning_rate_decr=0.95):
+          improvement=1-1e-3, patience_incr=2.0, learning_rate_decr=0.95,
+          never_stop=False):
     # Setup parameters
     n_batches = datasets.get_train_size() / batch_size
 
@@ -95,7 +96,7 @@ def train(model, datasets, cost_func, error_func, regularize=0,
                         print "[test] error {0}".format(test_error)
 
                 # early stoping
-                if cur_iter > patience:
+                if cur_iter > patience and not never_stop:
                     done_looping = True
                     break
 

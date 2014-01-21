@@ -41,6 +41,7 @@ _cached_augment = os.path.join('..', 'cache', 'attributes_augment.pkl')
 _cached_preproc = os.path.join('..', 'cache', 'attributes_preproc.pkl')
 _cached_group = os.path.join('..', 'cache', 'attributes_group.pkl')
 _cached_nndata = os.path.join('..', 'cache', 'attributes_nndata.pkl')
+_cached_mixed_nndata = os.path.join('..', 'cache', 'attributes_mixed_nndata.pkl')
 _cached_model = os.path.join('..', 'cache', 'attributes_model.pkl')
 _cached_output = os.path.join('..', 'cache', 'attributes_output.mat')
 
@@ -162,7 +163,23 @@ def _form_nndata(images, attributes, load_from_cache=False, save_to_cache=False)
 
     return nndata
 
-def _train_model(nndata, load_from_cache=False, save_to_cache=True):
+def _add_mixdata(nndata, mix_images, mix_attributes, load_from_cache=False, save_to_cache=False):
+    print "Adding Mix-data ..."
+    print "==================="
+
+    if load_from_cache:
+        with open(_cached_mixed_nndata, 'rb') as f:
+            nndata = cPickle.load(f)
+    else:
+        nndata.add_train_data(mix_images, mix_attributes)
+
+    if save_to_cache:
+        with open(_cached_mixed_nndata, 'wb') as f:
+            cPickle.dump(nndata, f, protocol=cPickle.HIGHEST_PROTOCOL)
+
+    return nndata
+
+def _train_model(nndata, load_from_cache=False, save_to_cache=False):
     print "Training Model ..."
     print "=================="
 
@@ -173,17 +190,18 @@ def _train_model(nndata, load_from_cache=False, save_to_cache=True):
         layers = [ConvPoolLayer((20,3,5,5), (2,2), (3,80,40), actfuncs.tanh, False),
                   ConvPoolLayer((50,20,5,5), (2,2), None, actfuncs.tanh, True),
                   FullConnLayer(5950, 500, actfuncs.tanh),
-                  FullConnLayer(500, 2, actfuncs.softmax)]
+                  FullConnLayer(500, 3, actfuncs.softmax)]
 
         model = NeuralNet(layers)
 
         sgd.train(model, nndata,
                   costfuncs.mean_negative_loglikelihood,
                   costfuncs.mean_number_misclassified,
-                  regularize=1e-2,
+                  regularize=1e-3,
                   batch_size=500, n_epoch=200,
                   learning_rate=1e-1, momentum=0.9,
-                  learning_rate_decr=0.95)
+                  learning_rate_decr=0.95,
+                  never_stop=True)
 
     if save_to_cache:
         with open(_cached_model, 'wb') as f:
@@ -232,15 +250,28 @@ if __name__ == '__main__':
         'SARC3D'
     ]
 
+    mix_dataset_names = [
+        # 'GRID_mix',
+        # 'MIT_mix',
+        # 'ViPER_mix',
+        'CUHK_mix'
+    ]
+
     orig_images, orig_attributes = _load_datasets(dataset_names, True, False)
     # images, attributes = _augment(images, attributes, True, False)
 
+    orig_mix_images, orig_mix_attributes = _load_datasets(mix_dataset_names)
+
     images, attributes = _preproc(orig_images, orig_attributes, True, False)
-    images, attributes = _select_group(images, attributes, unique_groups[2], 'unique', True, False)
+    images, attributes = _select_group(images, attributes, unique_groups[0], 'unique', False, True)
 
-    nndata = _form_nndata(images, attributes, True, False)
+    mix_images, mix_attributes = _preproc(orig_mix_images, orig_mix_attributes)
+    mix_images, mix_attributes = _select_group(mix_images, mix_attributes, unique_groups[0], 'unique')
 
-    model = _train_model(nndata, True, False)
+    nndata = _form_nndata(images, attributes, False, True)
+    nndata = _add_mixdata(nndata, mix_images, mix_attributes, False, True)
 
-    _generate_output(model, nndata, orig_images)
+    model = _train_model(nndata, False, True)
+
+    # _generate_output(model, nndata, orig_images)
 
