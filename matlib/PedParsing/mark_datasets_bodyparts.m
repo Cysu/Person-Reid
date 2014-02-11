@@ -1,4 +1,4 @@
-function label_dataset(dname, model_coarse, model_fine)
+function mark_datasets_bodyparts(dname, model_coarse, model_fine)
 
 load(fullfile('..', '..', 'data', 'attributes', [dname '.mat']));
 
