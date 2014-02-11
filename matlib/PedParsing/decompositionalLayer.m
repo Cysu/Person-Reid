@@ -21,7 +21,7 @@ end
 if size(img,1) ~= 160 || size(img,2) ~= 60
     error('Size of the input image must be [160,60]!');
 end
-indexmap =  [10, 20, 30, 51, 40, 61, 63];
+indexmap =  [10, 20, 30, 40, 50, 60, 70];
 
 % % coarse decomposition
 feat = features(im2double(img), 5);
