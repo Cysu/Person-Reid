@@ -15,6 +15,8 @@ class FullConnLayer(Block):
 
     def __init__(self, input_size, output_size, active_func=None,
                  W=None, b=None):
+        super(FullConnLayer, self).__init__()
+
         self._active_func = active_func
 
         if W is None:
@@ -65,6 +67,8 @@ class ConvPoolLayer(Block):
             flatten_output: True if the output image should be flattened as a 
                 vector.
         """
+
+        super(ConvPoolLayer, self).__init__()
 
         self._filter_shape = filter_shape
         self._pool_shape = pool_shape
@@ -126,32 +130,33 @@ class CompLayer(Block):
     """
 
     def get_output(self, x):
-        """Get the combined long vector
+        """Get the combined vector
 
         Args:
-            x: A list or numpy ndarray. Each item should be a numpy ndarray 
-                representing an input data.
+            x: A list of theano symbols
 
         Returns:
-            A long numpy vector combining all the flattened input data
+            A long vector consisting of all the flattened input symbols
         """
 
-        return numpy.asarray([data.ravel() for data in x]).ravel()
-
+        return T.concatenate([data.flatten() for data in x])
+     
 
 class DecompLayer(Block):
     """Decomposition layer
 
-    Decomposition layer separate a long vector into a list of output data
+    Decomposition layer separates a long vector into a list of output data
     """
 
     def __init__(self, data_shapes):
         """Initialize the decomposition layer
 
         Args:
-            data_shapes:  A list of tuples representing shapes of each data
+            data_shapes: A list of tuples representing shapes of each data
                 sample
         """
+
+        super(DecompLayer, self).__init__()
 
         self._data_shapes = data_shapes
 
@@ -166,7 +171,7 @@ class DecompLayer(Block):
             x: A long numpy vector
 
         Returns:
-            A list of data samples
+            A list of data samples which are theano symbols
         """
 
         ret = []

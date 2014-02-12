@@ -39,6 +39,8 @@ class NeuralNet(Block):
     """A composition of several blocks"""
 
     def __init__(self, blocks):
+        super(NeuralNet, self).__init__()
+
         self._blocks = blocks
 
         self._params = []
@@ -70,6 +72,7 @@ class AutoEncoder(NeuralNet):
 
             active_funcs: A list of layer-wise active functions.
         """
+        super(AutoEncoder, self).__init__()
 
         n_layers = len(active_funcs)
         assert n_layers == len(layer_sizes) - 1
@@ -109,14 +112,15 @@ class MultiwayNeuralNet(Block):
             blocks: A list of parallel typical neural networks
         """
 
+        super(MultiwayNeuralNet, self).__init__()
+
         self._blocks = blocks
 
     def get_output(self, x):
         """Get the list of output data
 
         Args:
-            x: A list or numpy ndarray. Each item should be a numpy ndarray 
-                representing an input data.
+            x: A list of theano symbols each representing an input to a column
 
         Returns:
             A list of output data

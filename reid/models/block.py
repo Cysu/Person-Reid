@@ -6,7 +6,7 @@ class Block(object):
     """Abstract base class for neural network layers and models"""
 
     def __init__(self):
-        self._params = None
+        self._params = []
 
     @property
     def parameters(self):
