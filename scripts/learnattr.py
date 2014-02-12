@@ -3,7 +3,9 @@
 
 import os
 import numpy
-from cache_manager import CacheManager
+import attrconf
+import bodyconf
+from reid.utils.cache_manager import CacheManager
 
 
 cachem = CacheManager(os.path.join('..', 'cache'), 'attr')
@@ -16,8 +18,9 @@ def load_data(datasets):
     Args:
         datasets: A list of datasets names
     
-    Returns a list of tuples. Each is for one pedestrian in the form of
-    ``(image, body_parts_map, attribute)``.
+    Returns:
+        A list of tuples. Each is for one pedestrian in the form of
+        ``(image, body_parts_map, attribute)``.
     """
 
     data = cachem.load('raw')
@@ -54,9 +57,10 @@ def decomp_body(rawdata, groups, dilation_radius=3):
         groups: A list of groups' pixel values
         dilation_radius: The radius of dilation to be performed on group region
 
-    Returns a list of tuples. Each is for one pedestrian in the form of
-    ``([img_0, img_1, ... , img_m], attribute)`` where ``m`` is the number
-    of body parts groups.
+    Returns:
+        A list of tuples. Each is for one pedestrian in the form of
+        ``([img_0, img_1, ... , img_m], attribute)`` where ``m`` is the number
+        of body parts groups.
     """
 
     data = cachem.load('decomp')
@@ -93,8 +97,9 @@ def create_dataset(data):
     Args:
         data: A list of pedestrian tuples returned by ``decomp_body``
 
-    Returns a Dataset object to be used for model training, validation and
-    testing.
+    Returns:
+        A Dataset object to be used for model training, validation and
+        testing.
     """
 
     dataset = cachem.load('dataset')
@@ -121,10 +126,45 @@ def create_dataset(data):
     return dataset
 
 
-if __name__ == '__main__':
-    import attrconf
-    import bodyconf
+@cachem.save('model')
+def train_model(dataset):
+    """Train deep model
 
+    This function will build up a deep neural network and train it using given
+    dataset.
+
+    Args:
+        dataset: A Dataset object returned by ``create_dataset``
+
+    Returns:
+        The trained deep model.
+    """
+
+    model = cachem.load('model')
+
+    if model is None:
+        import reid.models.active_functions as actfuncs
+        from reid.models.layers import ConvPoolLayer, CompLayer, DecompLayer
+        from reid.models.neural_net import NeuralNet, MultiwayNeuralNet
+
+        input_decomp = DecompLayer([(3,160,80)] * 4)
+
+        columns = MultiwayNeuralNet([NeuralNet([
+            ConvPoolLayer((64,3,5,5), (2,2), (3,160,60), actfuncs.tanh, False),
+            ConvPoolLayer((64,3,5,5), (2,2), None, actfuncs.tanh, False),
+            ConvPoolLayer((64,3,5,5), (2,2), None, actfuncs.tanh, True)
+        ]) for __ in xrange(len(bodyconf.groups))])
+
+        feature_comp = CompLayer()
+
+
+
+    return model
+
+
+if __name__ == '__main__':
     data = load_data(attrconf.datasets)
     data = decomp_body(data, bodyconf.groups)
     data = create_dataset(data)
+
+    model = train_model(data)
