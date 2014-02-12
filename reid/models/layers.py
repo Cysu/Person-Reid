@@ -126,26 +126,30 @@ class ConvPoolLayer(Block):
 class CompLayer(Block):
     """Composition layer
 
-    Composition layer combines a list of input data into a long vector
+    Composition layer concatenates a list of theano tensors into a theano
+    matrix. The tensor should have at least two dimensions. Along the first
+    dimension are data samples.
     """
 
     def get_output(self, x):
-        """Get the combined vector
+        """Get the concatenated matrix
 
         Args:
-            x: A list of theano symbols
+            x: A list of theano tensors
 
         Returns:
-            A long vector consisting of all the flattened input symbols
+            The concatenated matrix
         """
 
-        return T.concatenate([data.flatten() for data in x])
+        return T.concatenate([t.flatten(2) for t in x], axis=1)
      
 
 class DecompLayer(Block):
     """Decomposition layer
 
-    Decomposition layer separates a long vector into a list of output data
+    Decomposition layer separates a theano matrix into a list of theano tensors.
+    The tensor has at least two dimensions. Along the first dimension are data
+    samples.
     """
 
     def __init__(self, data_shapes):
@@ -165,18 +169,20 @@ class DecompLayer(Block):
             self._segments.append(self._segments[i] + numpy.prod(shape))
 
     def get_output(self, x):
-        """Get the separated list of data samples
+        """Get the separated list of theano tensors
 
         Args:
-            x: A long numpy vector
+            x: A concatenated theano matrix
 
         Returns:
-            A list of data samples which are theano symbols
+            The list of theano tensors
         """
 
-        ret = []
+        m = x.shape[0]
+        ret = [0] * len(self._data_shapes)
+
         for i, shape in enumerate(self._data_shapes):
             l, r = self._segments[i], self._segments[i+1]
-            ret.append(x[l:r].reshape(shape))
+            ret[i] = x[:, l:r].reshape((m,) + shape)
 
         return ret
