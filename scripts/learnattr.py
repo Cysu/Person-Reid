@@ -83,9 +83,48 @@ def decomp_body(rawdata, groups, dilation_radius=3):
     return data
 
 
+@cachem.save('dataset')
+def create_dataset(data):
+    """Create dataset for model training, validation and testing
+
+    This function will pre-process the decomposed images and flatten each sample
+    into a vector.
+
+    Args:
+        data: A list of pedestrian tuples returned by ``decomp_body``
+
+    Returns a Dataset object to be used for model training, validation and
+    testing.
+    """
+
+    dataset = cachem.load('dataset')
+
+    if dataset is None:
+        from reid.utils.dataset import Dataset
+        from reid.preproc import imageproc
+
+        def imgprep(img):
+            img = imageproc.subtract_luminance(img)
+            img = numpy.rollaxis(img, 2)
+            return numpy.tanh(img)
+
+        m = len(data)
+        X, Y = [0] * m, [0] * m
+
+        for i, (imgs, attr) in enumerate(data):
+            X[i] = [imgprep(img) for img in imgs]
+            X[i] = numpy.asarray(X[i], dtype=numpy.float32).ravel()
+            Y[i] = attr
+
+        dataset = Dataset(X, Y)
+
+    return dataset
+
+
 if __name__ == '__main__':
     import attrconf
     import bodyconf
 
     data = load_data(attrconf.datasets)
     data = decomp_body(data, bodyconf.groups)
+    data = create_dataset(data)

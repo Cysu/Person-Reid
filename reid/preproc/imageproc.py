@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import numpy
-
 import skimage.transform
 from skimage.color import rgb2lab
 from sklearn.preprocessing import MinMaxScaler, Binarizer
+
 
 def imtranslate(image, translation):
     trans = skimage.transform.AffineTransform(translation=translation)
