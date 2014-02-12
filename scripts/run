@@ -10,11 +10,16 @@ print_usage() {
     echo ""
 }
 
+PY=python
+if hash python2 2>/dev/null; then
+    PY=python2
+fi
+
 if [ $# -eq 0 ]; then
     print_usage
 else
     if [ $1 == "viewer" ]; then
-        python2 ../reid/utils/data_viewer.py
+        $PY ../reid/utils/data_viewer.py
     else
         print_usage
     fi
