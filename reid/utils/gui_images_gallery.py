@@ -3,7 +3,7 @@
 
 from PySide import QtGui
 
-from reid.utils import ndarray2qimage
+from reid.utils.gui_utils import ndarray2qimage
 from reid.utils.gui_flow_layout import FlowLayout
 
 

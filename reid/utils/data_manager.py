@@ -3,8 +3,7 @@
 
 import numpy
 from scipy.io import loadmat, savemat
-
-from reid import utils
+from reid.utils.math_utils import cell
 
 
 def view_repr(group_data):
@@ -154,7 +153,7 @@ class DataSaver(object):
         savemat(fpath, {'data': self._py2mat(self._data)})
 
     def add_group(self, n_pedes, n_views):
-        self._data.append([{'pedes': utils.cell([], n_pedes, n_views)}])
+        self._data.append([{'pedes': cell([], n_pedes, n_views)}])
 
         return len(self._data)-1
 
