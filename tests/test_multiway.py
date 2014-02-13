@@ -7,6 +7,7 @@ import theano.tensor as T
 from reid.models.layers import FullConnLayer, DecompLayer, CompLayer
 from reid.models.neural_net import MultiwayNeuralNet, NeuralNet
 
+
 # Setup test sample
 X = numpy.asarray([2,1,1,3], dtype=numpy.float32).reshape(1, 4)
 Y = numpy.asarray([5,8,10,6], dtype=numpy.float32).reshape(1, 4)

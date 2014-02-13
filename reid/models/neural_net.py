@@ -36,7 +36,7 @@ def get_error(model, error_func, x, target):
 
 
 class NeuralNet(Block):
-    """A composition of several blocks"""
+    """Composite blocks in a sequential manner"""
 
     def __init__(self, blocks):
         super(NeuralNet, self).__init__()
@@ -72,7 +72,6 @@ class AutoEncoder(NeuralNet):
 
             active_funcs: A list of layer-wise active functions.
         """
-        super(AutoEncoder, self).__init__()
 
         n_layers = len(active_funcs)
         assert n_layers == len(layer_sizes) - 1
@@ -97,7 +96,7 @@ class AutoEncoder(NeuralNet):
             self._params.append(layer.parameters[1])
 
 
-class MultiwayNeuralNet(Block):
+class MultiwayNeuralNet(NeuralNet):
     """Multiway neural network
 
     The multiway neural network consists of several parallel typical neural 
@@ -112,9 +111,7 @@ class MultiwayNeuralNet(Block):
             blocks: A list of parallel typical neural networks
         """
 
-        super(MultiwayNeuralNet, self).__init__()
-
-        self._blocks = blocks
+        super(MultiwayNeuralNet, self).__init__(blocks)
 
     def get_output(self, x):
         """Get the list of output data
@@ -127,6 +124,3 @@ class MultiwayNeuralNet(Block):
         """
 
         return [block.get_output(data) for data, block in zip(x, self._blocks)]
-
-    def get_regularization(self, l):
-        return sum([block.get_regularization(l) for block in self._blocks])
