@@ -46,15 +46,14 @@ def load_data(datasets):
 
 
 @cachem.save('decomp')
-def decomp_body(rawdata, groups, dilation_radius=3):
-    """Decompose pedestrain into several body parts groups
+def decompose(rawdata, dilation_radius=3):
+    """Decompose pedestrain into several body parts groups and 
 
     This function will generate an image containing only the region of
     particular body parts for each group.
 
     Args:
         rawdata: A list of pedestrian tuples returned by ``load_data``
-        groups: A list of groups' pixel values
         dilation_radius: The radius of dilation to be performed on group region
 
     Returns:
@@ -69,20 +68,41 @@ def decomp_body(rawdata, groups, dilation_radius=3):
         import skimage.morphology as morph
         selem = morph.square(2*dilation_radius)
 
-        data = [0] * len(rawdata)
+        # Decompose pedestrian image into body parts
+        def decomp_body(img, bpmap):
+            imgs = [0] * len(bodyconf.groups)
 
-        for i, (img, bpmap, attr) in enumerate(rawdata):
-            imgs = [0] * len(groups)
-
-            for j, grp in enumerate(groups):
+            for i, grp in enumerate(bodyconf.groups):
                 # mask = dilate(region_0 | region_1 | ... | region_k)
                 regions = [(bpmap == pixval) for pixval in grp]
                 mask = reduce(lambda x, y: x|y, regions)
                 mask = morph.binary_dilation(mask, selem)
+                imgs[i] = img * numpy.expand_dims(mask, axis=2)
 
-                imgs[j] = img * numpy.expand_dims(mask, axis=2)
+            return imgs
 
-            data[i] = (imgs, attr)
+        # Decompose attributes vector into uni- and multi- value groups
+        def decomp_attr(attr):
+            attrs = []
+
+            for grp in attrconf.unival:
+                subattr = attr[[attrconf.names.index(s) for s in grp]]
+                if subattr.sum() != 1: return None
+                attrs.append(numpy.where(subattr == 1)[0])
+
+            for grp in attrconf.multival:
+                subattr = attr[[attrconf.names.index(s) for s in grp]]
+                if subattr.sum() == 0: return None
+                attrs.append(subattr)
+
+            return attrs
+
+        data = []
+        for img, bpmap, attr in rawdata:
+            attr = decomp_attr(attr)
+            if attr is None: continue
+            body = decomp_body(img, bpmap)
+            data.append((body, attr))
 
     return data
 
@@ -119,7 +139,10 @@ def create_dataset(data):
         for i, (imgs, attr) in enumerate(data):
             X[i] = [imgprep(img) for img in imgs]
             X[i] = numpy.asarray(X[i], dtype=numpy.float32).ravel()
-            Y[i] = attr
+            Y[i] = numpy.concatenate(attr).astype(numpy.float32)
+
+        X = numpy.asarray(X)
+        Y = numpy.asarray(Y)
 
         dataset = Dataset(X, Y)
 
@@ -164,7 +187,7 @@ def train_model(dataset):
 
 if __name__ == '__main__':
     data = load_data(attrconf.datasets)
-    data = decomp_body(data, bodyconf.groups)
+    data = decompose(data)
     data = create_dataset(data)
 
-    model = train_model(data)
+    # model = train_model(data)
