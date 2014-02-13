@@ -152,30 +152,34 @@ class DecompLayer(Block):
     samples.
     """
 
-    def __init__(self, data_shapes):
+    def __init__(self, data_shapes, active_funcs=None):
         """Initialize the decomposition layer
 
         Args:
             data_shapes: A list of tuples representing shapes of each data
                 sample
+            active_funcs: A list of active functions for each separated theano
+                tensor
         """
 
         super(DecompLayer, self).__init__()
 
         self._data_shapes = data_shapes
+        self._active_funcs = active_funcs
 
         self._segments = [0]
         for i, shape in enumerate(data_shapes):
             self._segments.append(self._segments[i] + numpy.prod(shape))
 
+
     def get_output(self, x):
-        """Get the separated list of theano tensors
+        """Get the separated list of theano tensors with specified activation
 
         Args:
             x: A concatenated theano matrix
 
         Returns:
-            The list of theano tensors
+            The list of theano tensors with specified activation
         """
 
         m = x.shape[0]
@@ -184,5 +188,7 @@ class DecompLayer(Block):
         for i, shape in enumerate(self._data_shapes):
             l, r = self._segments[i], self._segments[i+1]
             ret[i] = x[:, l:r].reshape((m,) + shape)
+            if self._active_funcs is not None and self._active_funcs[i] is not None:
+                ret[i] = self._active_funcs[i](ret[i])
 
         return ret
