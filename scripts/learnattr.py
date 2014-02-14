@@ -129,6 +129,7 @@ def create_dataset(data):
         from reid.preproc import imageproc
 
         def imgprep(img):
+            img = imageproc.imresize(img, (80, 30))
             img = imageproc.subtract_luminance(img)
             img = numpy.rollaxis(img, 2)
             return numpy.tanh(img)
@@ -145,6 +146,7 @@ def create_dataset(data):
         Y = numpy.asarray(Y)
 
         dataset = Dataset(X, Y)
+        dataset.split(0.8, 0.1)
 
     return dataset
 
@@ -167,20 +169,51 @@ def train_model(dataset):
 
     if model is None:
         import reid.models.active_functions as actfuncs
-        from reid.models.layers import ConvPoolLayer, CompLayer, DecompLayer
+        import reid.models.cost_functions as costfuncs
+        from reid.models.layers import ConvPoolLayer, FullConnLayer
+        from reid.models.layers import CompLayer, DecompLayer
         from reid.models.neural_net import NeuralNet, MultiwayNeuralNet
+        from reid.models.evaluate import Evaluator
+        from reid.optimization import sgd
 
-        input_decomp = DecompLayer([(3,160,80)] * 4)
+        # Build up model
+        input_decomp = DecompLayer([(3,80,30)] * 4)
 
         columns = MultiwayNeuralNet([NeuralNet([
-            ConvPoolLayer((64,3,5,5), (2,2), (3,160,60), actfuncs.tanh, False),
-            ConvPoolLayer((64,3,5,5), (2,2), None, actfuncs.tanh, False),
-            ConvPoolLayer((64,3,5,5), (2,2), None, actfuncs.tanh, True)
+            ConvPoolLayer((64,3,5,5), (2,2), (3,80,30), actfuncs.tanh, False),
+            ConvPoolLayer((64,64,5,5), (2,2), None, actfuncs.tanh, True)
         ]) for __ in xrange(len(bodyconf.groups))])
 
         feature_comp = CompLayer()
 
+        classify = FullConnLayer(17408, 99)
 
+        attr_decomp = DecompLayer(
+            [(3,), (7,), (2,), (5,), (8,), (10,), (10,), (6,), (11,), (11,), (11,), (15,)],
+            [actfuncs.softmax] * 4 + [actfuncs.sigmoid] * 8
+        )
+
+        model = NeuralNet([input_decomp, columns, feature_comp, classify, attr_decomp])
+
+        # Build up adapter
+        adapter = DecompLayer(
+            [(1,)] * 4 + [(8,), (10,), (10,), (6,), (11,), (11,), (11,), (15,)]
+        )
+
+        # Build up evaluator
+        cost_functions = [costfuncs.mean_negative_loglikelihood] * 4 + \
+                         [costfuncs.mean_binary_cross_entropy] * 8
+
+        error_functions = [costfuncs.mean_number_misclassified] * 4 + \
+                          [costfuncs.mean_zeroone_error_rate] * 8
+
+        evaluator = Evaluator(model, cost_functions, error_functions, adapter,
+                              regularize=1e-3)
+
+        # Train the model
+        sgd.train(evaluator, dataset,
+                  learning_rate=1e-3, momentum=0,
+                  batch_size=300, n_epoch=200)
 
     return model
 
@@ -190,4 +223,4 @@ if __name__ == '__main__':
     data = decompose(data)
     data = create_dataset(data)
 
-    # model = train_model(data)
+    model = train_model(data)
