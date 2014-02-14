@@ -213,14 +213,142 @@ def train_model(dataset):
         # Train the model
         sgd.train(evaluator, dataset,
                   learning_rate=1e-3, momentum=0,
-                  batch_size=300, n_epoch=200)
+                  batch_size=300, n_epoch=200,
+                  learning_rate_decr=1.0,
+                  never_stop=True)
 
     return model
 
 
-if __name__ == '__main__':
-    data = load_data(attrconf.datasets)
-    data = decompose(data)
-    data = create_dataset(data)
+@cachem.save('result')
+def compute_result(model, dataset, rawdata):
+    """Compute output value of data samples by using the trained model
 
-    model = train_model(data)
+    Args:
+        model: A NeuralNet model
+        dataset: A Dataset object returned by ``create_dataset``
+        rawdata: A list of pedestrian tuples returned by ``load_data``
+
+    Returns:
+        A tuple (train, valid, test) where each is three matrices
+        (image_tensor4D, output_matrix, target_matrix)
+    """
+
+    result = cachem.load('result')
+
+    if result is None:
+        import theano
+        import theano.tensor as T
+        from reid.models.layers import CompLayer
+        from reid.models.neural_net import NeuralNet
+
+        model = NeuralNet([model, CompLayer()])
+        x = T.matrix()
+        f = theano.function(inputs=[x], outputs=model.get_output(x))
+
+        def compute(X, T, raw):
+            m = X.shape[0]
+            images, outputs = [0] * m, [0] * m
+            for i in xrange(m):
+                images[i] = raw[i][0]
+                outputs[i] = f(X[i:i+1, :]).ravel()
+            return (numpy.asarray(images), numpy.asarray(outputs), T)
+
+        rawdata = numpy.asarray(rawdata)
+
+        train = compute(dataset.train_x.get_value(borrow=True),
+                        dataset.train_y.get_value(borrow=True),
+                        rawdata[dataset.train_ind])
+
+        valid = compute(dataset.valid_x.get_value(borrow=True),
+                        dataset.valid_y.get_value(borrow=True),
+                        rawdata[dataset.valid_ind])
+
+        test = compute(dataset.test_x.get_value(borrow=True),
+                       dataset.test_y.get_value(borrow=True),
+                       rawdata[dataset.test_ind])
+
+        result = (train, valid, test)
+
+    return result
+
+
+def show_result(result):
+    """Compute the statistics of the result and display them in GUI
+
+    Args:
+        result: A list of result tuples returned by ``compute_result``
+    """
+
+    train, valid, test = result
+
+    output_seg = [0, 3, 10, 12, 17, 25, 35, 45, 51, 62, 73, 84, 99]
+    target_seg = [0, 1, 2, 3, 4, 12, 22, 32, 38, 49, 60, 71, 86]
+
+    def print_stats(title, outputs, targets):
+        print "Statistics of {0}".format(title)
+        print "=" * 80
+
+        for i, (grptitle, grp) in \
+                enumerate(zip(attrconf.unival_titles, attrconf.unival)):
+            print "{0}, frequency, accuracy".format(grptitle)
+
+            o = outputs[:, output_seg[i]:output_seg[i+1]]
+            t = targets[:, target_seg[i]:target_seg[i+1]]
+            p = o.argmax(axis=1).reshape(o.shape[0], 1)
+
+            freqs, accs = [0] * len(grp), [0] * len(grp)
+            for j, attrname in enumerate(grp):
+                freqs[j] = (t == j).mean()
+                accs[j] = ((t == j) & (p == j)).sum() * 1.0 / (t == j).sum()
+                if accs[j] is numpy.nan: accs[j] = 0
+                print "{0},{1},{2}".format(attrname, freqs[j], accs[j])
+
+            freqs = numpy.asarray(freqs)
+            accs = numpy.asarray(accs)
+
+            print "Overall accuracy = {0}".format((freqs * accs).sum())
+            print ""
+
+        for i, (grptitle, grp) in \
+                enumerate(zip(attrconf.multival_titles, attrconf.multival)):
+            print "{0}, frequency, TPR, FPR".format(grptitle)
+
+            o = outputs[:, output_seg[i+4]:output_seg[i+5]]
+            t = targets[:, target_seg[i+4]:target_seg[i+5]]
+            p = o.round()
+
+            freqs, tprs, fprs = [0] * len(grp), [0] * len(grp), [0] * len(grp)
+            for j, attrname in enumerate(grp):
+                tj, pj = t[:, j], p[:, j]
+                freqs[j] = (tj == 1).mean()
+                tprs[j] = ((tj == 1) & (pj == 1)).sum() * 1.0 / (tj == 1).sum()
+                fprs[j] = ((tj == 0) & (pj == 1)).sum() * 1.0 / (tj == 0).sum()
+                if tprs[j] is numpy.nan: tprs[j] = 0
+                if fprs[j] is numpy.nan: fprs[j] = 0
+                print "{0},{1},{2},{3}".format(attrname, freqs[j], tprs[j], fprs[j])
+
+            freqs = numpy.asarray(freqs)
+            tprs = numpy.asarray(tprs)
+            fprs = numpy.asarray(fprs)
+
+            print "Overal TPR = {0}, FPR = {1}".format(
+                (freqs * tprs).sum() / freqs.sum(),
+                (freqs * fprs).sum() / freqs.sum()
+            )
+            print ""
+
+    print_stats("Training Set", train[1], train[2])
+    print_stats("Validation Set", valid[1], valid[2])
+    print_stats("Testing Set", test[1], test[2]) 
+
+
+if __name__ == '__main__':
+    rawdata = load_data(attrconf.datasets)
+    dataset = decompose(rawdata)
+    dataset = create_dataset(dataset)
+
+    model = train_model(dataset)
+    result = compute_result(model, dataset, rawdata)
+
+    show_result(result)

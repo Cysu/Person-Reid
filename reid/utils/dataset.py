@@ -59,16 +59,16 @@ class Dataset(object):
 
         p = numpy.random.permutation(m)
 
-        train_ind = p[0 : m_train]
-        valid_ind = p[m_train : m_train+m_valid]
-        test_ind = p[m_train+m_valid : ]
+        self.train_ind = p[0 : m_train]
+        self.valid_ind = p[m_train : m_train+m_valid]
+        self.test_ind = p[m_train+m_valid : ]
 
-        self.train_x = self._create_shared(self.X[train_ind, :])
-        self.train_y = self._create_shared(self.Y[train_ind, :])
-        self.valid_x = self._create_shared(self.X[valid_ind, :])
-        self.valid_y = self._create_shared(self.Y[valid_ind, :])
-        self.test_x = self._create_shared(self.X[test_ind, :])
-        self.test_y = self._create_shared(self.Y[test_ind, :])
+        self.train_x = self._create_shared(self.X[self.train_ind, :])
+        self.train_y = self._create_shared(self.Y[self.train_ind, :])
+        self.valid_x = self._create_shared(self.X[self.valid_ind, :])
+        self.valid_y = self._create_shared(self.Y[self.valid_ind, :])
+        self.test_x = self._create_shared(self.X[self.test_ind, :])
+        self.test_y = self._create_shared(self.Y[self.test_ind, :])
 
     def get_train_size(self):
         return self.train_x.get_value(borrow=True).shape[0]
