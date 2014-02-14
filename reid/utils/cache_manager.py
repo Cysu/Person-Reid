@@ -44,7 +44,8 @@ class CacheManager(object):
         """Save to cache
 
         This is a decorator function that decorates on any function. Its return
-        value will be saved and then returned again.
+        value will be saved and then returned again. If the data file already
+        exists, then the new data will not be saved.
 
         Args:
             task: The task name
@@ -57,8 +58,9 @@ class CacheManager(object):
         def decorator(func):
             def wrapper(*args, **kwargs):
                 data = func(*args, **kwargs)
-                with open(fpath, 'wb') as f:
-                    cPickle.dump(data, f, protocol=cPickle.HIGHEST_PROTOCOL)
+                if not os.path.isfile(fpath):
+                    with open(fpath, 'wb') as f:
+                        cPickle.dump(data, f, protocol=cPickle.HIGHEST_PROTOCOL)
                 return data
             return wrapper
         return decorator

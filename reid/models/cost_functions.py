@@ -20,4 +20,4 @@ def mean_number_misclassified(output, target):
 
 def mean_zeroone_error_rate(output, target):
     pred = T.round(output)
-    return T.neq(pred, target).mean(axis=0)
+    return T.neq(pred, target).mean()
