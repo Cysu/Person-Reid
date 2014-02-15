@@ -57,9 +57,9 @@ def decompose(rawdata, dilation_radius=3):
         dilation_radius: The radius of dilation to be performed on group region
 
     Returns:
-        A list of tuples. Each is for one pedestrian in the form of
-        ``([img_0, img_1, ... , img_m], attribute)`` where ``m`` is the number
-        of body parts groups.
+        A list of tuples with each tuple for one pedestrian in the form of
+        ``(img, [img_0, img_1, ... , img_m], attribute)`` where ``img`` is the
+        original image and ``m`` is the number of body parts groups.
     """
 
     data = cachem.load('decomp')
@@ -102,7 +102,7 @@ def decompose(rawdata, dilation_radius=3):
             attr = decomp_attr(attr)
             if attr is None: continue
             body = decomp_body(img, bpmap)
-            data.append((body, attr))
+            data.append((img, body, attr))
 
     return data
 
@@ -137,7 +137,7 @@ def create_dataset(data):
         m = len(data)
         X, Y = [0] * m, [0] * m
 
-        for i, (imgs, attr) in enumerate(data):
+        for i, (__, imgs, attr) in enumerate(data):
             X[i] = [imgprep(img) for img in imgs]
             X[i] = numpy.asarray(X[i], dtype=numpy.float32).ravel()
             Y[i] = numpy.concatenate(attr).astype(numpy.float32)
@@ -180,20 +180,21 @@ def train_model(dataset):
         input_decomp = DecompLayer([(3,80,30)] * 4)
 
         columns = MultiwayNeuralNet([NeuralNet([
-            ConvPoolLayer((64,3,5,5), (2,2), (3,80,30), actfuncs.tanh, False),
-            ConvPoolLayer((64,64,5,5), (2,2), None, actfuncs.tanh, True)
+            ConvPoolLayer((64,3,3,3), (2,2), (3,80,30), actfuncs.tanh, False),
+            ConvPoolLayer((64,64,3,3), (2,2), None, actfuncs.tanh, True)
         ]) for __ in xrange(len(bodyconf.groups))])
 
-        feature_comp = CompLayer()
+        feature_comp = CompLayer(strategy='Maxout')
 
-        classify = FullConnLayer(17408, 99)
+        classify_1 = FullConnLayer(6912, 99)
+        classify_2 = FullConnLayer(99, 99)
 
         attr_decomp = DecompLayer(
             [(3,), (7,), (2,), (5,), (8,), (10,), (10,), (6,), (11,), (11,), (11,), (15,)],
             [actfuncs.softmax] * 4 + [actfuncs.sigmoid] * 8
         )
 
-        model = NeuralNet([input_decomp, columns, feature_comp, classify, attr_decomp])
+        model = NeuralNet([input_decomp, columns, feature_comp, classify_1, classify_2, attr_decomp])
 
         # Build up adapter
         adapter = DecompLayer(
@@ -212,7 +213,7 @@ def train_model(dataset):
 
         # Train the model
         sgd.train(evaluator, dataset,
-                  learning_rate=1e-3, momentum=0,
+                  learning_rate=1e-3, momentum=0.9,
                   batch_size=300, n_epoch=200,
                   learning_rate_decr=1.0,
                   never_stop=True)
@@ -221,13 +222,13 @@ def train_model(dataset):
 
 
 @cachem.save('result')
-def compute_result(model, dataset, rawdata):
+def compute_result(model, dataset, data):
     """Compute output value of data samples by using the trained model
 
     Args:
         model: A NeuralNet model
         dataset: A Dataset object returned by ``create_dataset``
-        rawdata: A list of pedestrian tuples returned by ``load_data``
+        data:  list of pedestrian tuples returned by ``decomp_body``
 
     Returns:
         A tuple (train, valid, test) where each is three matrices
@@ -246,27 +247,23 @@ def compute_result(model, dataset, rawdata):
         x = T.matrix()
         f = theano.function(inputs=[x], outputs=model.get_output(x))
 
-        def compute(X, T, raw):
-            m = X.shape[0]
-            images, outputs = [0] * m, [0] * m
-            for i in xrange(m):
-                images[i] = raw[i][0]
-                outputs[i] = f(X[i:i+1, :]).ravel()
-            return (numpy.asarray(images), numpy.asarray(outputs), T)
+        def compute_output(X):
+            outputs = [f(X[i:i+1, :]).ravel() for i in xrange(X.shape[0])]
+            return numpy.asarray(outputs)
 
-        rawdata = numpy.asarray(rawdata)
+        images = numpy.asarray([p[0] for p in data])
 
-        train = compute(dataset.train_x.get_value(borrow=True),
-                        dataset.train_y.get_value(borrow=True),
-                        rawdata[dataset.train_ind])
+        train = (images[dataset.train_ind],
+                 compute_output(dataset.train_x.get_value(borrow=True)),
+                 dataset.train_y.get_value(borrow=True))
 
-        valid = compute(dataset.valid_x.get_value(borrow=True),
-                        dataset.valid_y.get_value(borrow=True),
-                        rawdata[dataset.valid_ind])
+        valid = (images[dataset.valid_ind],
+                 compute_output(dataset.valid_x.get_value(borrow=True)),
+                 dataset.valid_y.get_value(borrow=True))
 
-        test = compute(dataset.test_x.get_value(borrow=True),
-                       dataset.test_y.get_value(borrow=True),
-                       rawdata[dataset.test_ind])
+        test = (images[dataset.test_ind],
+                compute_output(dataset.test_x.get_value(borrow=True)),
+                dataset.test_y.get_value(borrow=True))
 
         result = (train, valid, test)
 
@@ -340,15 +337,15 @@ def show_result(result):
 
     print_stats("Training Set", train[1], train[2])
     print_stats("Validation Set", valid[1], valid[2])
-    print_stats("Testing Set", test[1], test[2]) 
+    print_stats("Testing Set", test[1], test[2])
 
 
 if __name__ == '__main__':
-    rawdata = load_data(attrconf.datasets)
-    dataset = decompose(rawdata)
-    dataset = create_dataset(dataset)
+    data = load_data(attrconf.datasets)
+    data = decompose(data)
+    dataset = create_dataset(data)
 
     model = train_model(dataset)
-    result = compute_result(model, dataset, rawdata)
+    result = compute_result(model, dataset, data)
 
     show_result(result)
