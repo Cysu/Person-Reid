@@ -126,13 +126,13 @@ def create_dataset(data):
 
     if dataset is None:
         from reid.utils.dataset import Dataset
-        from reid.preproc import imageproc
+        from reid.preproc import imageproc, dataproc
 
         def imgprep(img):
             img = imageproc.imresize(img, (80, 30))
             img = imageproc.subtract_luminance(img)
             img = numpy.rollaxis(img, 2)
-            return numpy.tanh(img)
+            return img
 
         m = len(data)
         X, Y = [0] * m, [0] * m
@@ -144,6 +144,8 @@ def create_dataset(data):
 
         X = numpy.asarray(X)
         Y = numpy.asarray(Y)
+
+        X = numpy.tanh(dataproc.whitening(X))
 
         dataset = Dataset(X, Y)
         dataset.split(0.8, 0.1)
