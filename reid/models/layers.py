@@ -131,6 +131,19 @@ class CompLayer(Block):
     dimension are data samples.
     """
 
+    def __init__(self, strategy=None):
+        """Initialize the composition layer
+
+        Args:
+            strategy: None to just concatenate the list of theano tensors
+                together. "Maxout" to perform max-out grouping on the list
+                of theano tensors.
+        """
+
+        super(CompLayer, self).__init__()
+
+        self._strategy = strategy
+
     def get_output(self, x):
         """Get the concatenated matrix
 
@@ -141,7 +154,13 @@ class CompLayer(Block):
             The concatenated matrix
         """
 
-        return T.concatenate([t.flatten(2) for t in x], axis=1)
+        z = [t.flatten(2) for t in x]
+
+        if self._strategy is None:
+            return T.concatenate(z, axis=1)
+        elif self._strategy == 'Maxout':
+            m, n, g = z[0].shape[0], z[0].shape[1], len(z)
+            return T.concatenate(z, axis=0).reshape((g, m, n)).max(axis=0)
      
 
 class DecompLayer(Block):
