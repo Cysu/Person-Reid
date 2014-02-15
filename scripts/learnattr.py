@@ -145,10 +145,10 @@ def create_dataset(data):
         X = numpy.asarray(X)
         Y = numpy.asarray(Y)
 
-        X = numpy.tanh(dataproc.whitening(X))
+        X = numpy.tanh(X - X.mean(axis=0))
 
         dataset = Dataset(X, Y)
-        dataset.split(0.8, 0.1)
+        dataset.split(0.7, 0.2)
 
     return dataset
 
@@ -215,10 +215,9 @@ def train_model(dataset):
 
         # Train the model
         sgd.train(evaluator, dataset,
-                  learning_rate=1e-3, momentum=0.9,
+                  learning_rate=5e-3, momentum=0.9,
                   batch_size=300, n_epoch=200,
-                  learning_rate_decr=1.0,
-                  never_stop=True)
+                  learning_rate_decr=1.0, patience_incr=1.5)
 
     return model
 
@@ -300,7 +299,7 @@ def show_result(result):
             for j, attrname in enumerate(grp):
                 freqs[j] = (t == j).mean()
                 accs[j] = ((t == j) & (p == j)).sum() * 1.0 / (t == j).sum()
-                if accs[j] is numpy.nan: accs[j] = 0
+                if numpy.isnan(accs[j]): accs[j] = 0
                 print "{0},{1},{2}".format(attrname, freqs[j], accs[j])
 
             freqs = numpy.asarray(freqs)
@@ -323,8 +322,8 @@ def show_result(result):
                 freqs[j] = (tj == 1).mean()
                 tprs[j] = ((tj == 1) & (pj == 1)).sum() * 1.0 / (tj == 1).sum()
                 fprs[j] = ((tj == 0) & (pj == 1)).sum() * 1.0 / (tj == 0).sum()
-                if tprs[j] is numpy.nan: tprs[j] = 0
-                if fprs[j] is numpy.nan: fprs[j] = 0
+                if numpy.isnan(tprs[j]): tprs[j] = 0
+                if numpy.isnan(fprs[j]): fprs[j] = 0
                 print "{0},{1},{2},{3}".format(attrname, freqs[j], tprs[j], fprs[j])
 
             freqs = numpy.asarray(freqs)
