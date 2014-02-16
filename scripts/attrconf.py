@@ -11,32 +11,32 @@ unival = [
     ['hairBlack', 'hairBrown', 'hairGrey', 'hairOrange', 'hairRed', 'hairWhite', 'hairYellow'],
     ['personalFemale', 'personalMale'],
     ['personalLess15', 'personalLess30', 'personalLess45', 'personalLess60', 'personalLarger60']
+    ['footwearBlack', 'footwearBlue', 'footwearBrown', 'footwearGreen', 'footwearGrey', 'footwearOrange', 'footwearPink', 'footwearRed', 'footwearWhite', 'footwearYellow'],
+    ['lowerBodyBlack', 'lowerBodyBlue', 'lowerBodyBrown', 'lowerBodyGreen', 'lowerBodyGrey', 'lowerBodyOrange', 'lowerBodyPink', 'lowerBodyPurple', 'lowerBodyRed', 'lowerBodyWhite', 'lowerBodyYellow']
 ]
 
 unival_titles = [
     'Hair Style',
     'Hair Color',
     'Gender',
-    'Age'
+    'Age',
+    'Footwear Colors,',
+    'Lower Body Colors'
 ]
 
 multival = [
     ['accessoryFaceMask', 'accessoryHairBand', 'accessoryHat', 'accessoryHeadphone', 'accessoryKerchief', 'accessoryMuffler', 'accessoryNothing', 'accessorySunglasses'],
     ['carryingBabyBuggy', 'carryingBackpack', 'carryingFolder', 'carryingLuggageCase', 'carryingMessengerBag', 'carryingNothing', 'carryingOther', 'carryingPlasticBags', 'carryingSuitcase', 'carryingUmbrella'],
-    ['footwearBlack', 'footwearBlue', 'footwearBrown', 'footwearGreen', 'footwearGrey', 'footwearOrange', 'footwearPink', 'footwearRed', 'footwearWhite', 'footwearYellow'],
     ['footwearBoots', 'footwearLeatherShoes', 'footwearSandals', 'footwearShoes', 'footwearSneakers', 'footwearStocking'],
-    ['lowerBodyBlack', 'lowerBodyBlue', 'lowerBodyBrown', 'lowerBodyGreen', 'lowerBodyGrey', 'lowerBodyOrange', 'lowerBodyPink', 'lowerBodyPurple', 'lowerBodyRed', 'lowerBodyWhite', 'lowerBodyYellow'],
     ['lowerBodyCapri', 'lowerBodyCasual', 'lowerBodyFormal', 'lowerBodyJeans', 'lowerBodyLongSkirt', 'lowerBodyPlaid', 'lowerBodyShortSkirt', 'lowerBodyShorts', 'lowerBodySuits', 'lowerBodyThickStripes', 'lowerBodyTrousers'],
-    ['upperBodyBlack', 'upperBodyBlue', 'upperBodyBrown', 'upperBodyGreen', 'upperBodyGrey', 'upperBodyOrange', 'upperBodyPink', 'upperBodyPurple', 'upperBodyRed', 'upperBodyWhite', 'upperBodyYellow'],
-    ['upperBodyCasual', 'upperBodyFormal', 'upperBodyJacket', 'upperBodyLogo', 'upperBodyLongSleeve', 'upperBodyNoSleeve', 'upperBodyOther', 'upperBodyPlaid', 'upperBodyShortSleeve', 'upperBodySuit', 'upperBodySweater', 'upperBodyThickStripes', 'upperBodyThinStripes', 'upperBodyTshirt', 'upperBodyVNeck']
+    ['upperBodyCasual', 'upperBodyFormal', 'upperBodyJacket', 'upperBodyLogo', 'upperBodyLongSleeve', 'upperBodyNoSleeve', 'upperBodyOther', 'upperBodyPlaid', 'upperBodyShortSleeve', 'upperBodySuit', 'upperBodySweater', 'upperBodyThickStripes', 'upperBodyThinStripes', 'upperBodyTshirt', 'upperBodyVNeck'],
+    ['upperBodyBlack', 'upperBodyBlue', 'upperBodyBrown', 'upperBodyGreen', 'upperBodyGrey', 'upperBodyOrange', 'upperBodyPink', 'upperBodyPurple', 'upperBodyRed', 'upperBodyWhite', 'upperBodyYellow']
 ]
 
 multival_titles = [
     'Accessories',
     'Carryings',
-    'Footwear Colors,',
     'Footwear Styles',
-    'Lower Body Colors',
     'Lower Body Styles',
     'Upper Body Colors',
     'Upper Body Styles'
