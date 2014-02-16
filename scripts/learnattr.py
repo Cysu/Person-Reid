@@ -323,6 +323,12 @@ def show_stats(result):
             t = targets[:, target_seg[offset+i]:target_seg[offset+i+1]]
             p = o.round()
 
+            # Any multi-value group must have at least one attribute activated
+            for k in xrange(p.shape[0]):
+                if p[k, :].sum() == 0:
+                    v = o[k, :].argmax()
+                    p[k, v] = 1
+
             freqs, tprs, fprs = [0] * len(grp), [0] * len(grp), [0] * len(grp)
             for j, attrname in enumerate(grp):
                 tj, pj = t[:, j], p[:, j]
@@ -397,6 +403,11 @@ def show_result(result):
             o = output[output_seg[offset+i]:output_seg[offset+i+1]]
             t = target[target_seg[offset+i]:target_seg[offset+i+1]]
             p = o.round()
+
+            # Any multi-value group must have at least one attribute activated
+            if p.sum() == 0:
+                v = o.argmax()
+                p[v] = 1
 
             for j, attrname in enumerate(grp):
                 table.setItem(cur_row, 0, QtGui.QTableWidgetItem(attrname))
@@ -477,8 +488,15 @@ def show_result(result):
 
             pixmap = QtGui.QPixmap.fromImage(ndarray2qimage(img))
             self.image_panel.setPixmap(pixmap)
+
+            self.unival_table.hide()
+            self.multival_table.hide()
+
             compare_unival(self.unival_table, output, target)
             compare_multival(self.multival_table, output, target)
+
+            self.unival_table.show()
+            self.multival_table.show()
 
         def _create_menus(self):
             menu_bar = self.menuBar()
