@@ -521,9 +521,12 @@ def show_result(result):
                                  QtGui.QKeySequence.Back)
 
         def _create_panels(self):
+            uni_rows = sum([len(grp)+2 for grp in attrconf.unival]) - 1
+            mul_rows = sum([len(grp)+2 for grp in attrconf.multival]) - 1
+
             self.image_panel = QtGui.QLabel()
-            self.unival_table = self._create_table(49)
-            self.multival_table = self._create_table(72)
+            self.unival_table = self._create_table(uni_rows)
+            self.multival_table = self._create_table(mul_rows)
 
             layout = QtGui.QHBoxLayout()
             layout.addWidget(self.image_panel)
@@ -555,12 +558,14 @@ def show_result(result):
 
 
 if __name__ == '__main__':
-    data = load_data(attrconf.datasets)
-    data = decompose(data)
-    dataset = create_dataset(data)
+    # data = load_data(attrconf.datasets)
+    # data = decompose(data)
+    # dataset = create_dataset(data)
 
-    model = train_model(dataset)
-    result = compute_result(model, dataset, data)
+    # model = train_model(dataset)
+    # result = compute_result(model, dataset, data)
+
+    result = cachem.load('result')
 
     show_stats(result)
     show_result(result)
