@@ -178,6 +178,9 @@ def train_model(dataset):
         from reid.models.evaluate import Evaluator
         from reid.optimization import sgd
 
+        output_sizes = [len(grp) for grp in attrconf.unival + attrconf.multival]
+        target_sizes = [1] * len(attrconf.unival) + [len(grp) for grp in attrconf.multival]
+
         # Build up model
         input_decomp = DecompLayer([(3,80,30)] * 4)
 
@@ -192,23 +195,22 @@ def train_model(dataset):
         classify_2 = FullConnLayer(99, 99)
 
         attr_decomp = DecompLayer(
-            [(3,), (7,), (2,), (5,), (8,), (10,), (10,), (6,), (11,), (11,), (11,), (15,)],
-            [actfuncs.softmax] * 4 + [actfuncs.sigmoid] * 8
+            [(sz,) for sz in output_sizes],
+            [actfuncs.softmax] * len(attrconf.unival) + \
+            [actfuncs.sigmoid] * len(attrconf.multival)
         )
 
         model = NeuralNet([input_decomp, columns, feature_comp, classify_1, classify_2, attr_decomp])
 
         # Build up adapter
-        adapter = DecompLayer(
-            [(1,)] * 4 + [(8,), (10,), (10,), (6,), (11,), (11,), (11,), (15,)]
-        )
+        adapter = DecompLayer([(sz,) for sz in target_sizes])
 
         # Build up evaluator
-        cost_functions = [costfuncs.mean_negative_loglikelihood] * 4 + \
-                         [costfuncs.mean_binary_cross_entropy] * 8
+        cost_functions = [costfuncs.mean_negative_loglikelihood] * len(attrconf.unival) + \
+                         [costfuncs.mean_binary_cross_entropy] * len(attrconf.multival)
 
-        error_functions = [costfuncs.mean_number_misclassified] * 4 + \
-                          [costfuncs.mean_zeroone_error_rate] * 8
+        error_functions = [costfuncs.mean_number_misclassified] * len(attrconf.unival) + \
+                          [costfuncs.mean_zeroone_error_rate] * len(attrconf.multival)
 
         evaluator = Evaluator(model, cost_functions, error_functions, adapter,
                               regularize=1e-3)
@@ -280,8 +282,11 @@ def show_stats(result):
 
     train, valid, test = result
 
-    output_seg = [0, 3, 10, 12, 17, 25, 35, 45, 51, 62, 73, 84, 99]
-    target_seg = [0, 1, 2, 3, 4, 12, 22, 32, 38, 49, 60, 71, 86]
+    output_sizes = [len(grp) for grp in attrconf.unival + attrconf.multival]
+    target_sizes = [1] * len(attrconf.unival) + [len(grp) for grp in attrconf.multival]
+
+    output_seg = [0] + list(numpy.cumsum(output_sizes))
+    target_seg = [0] + list(numpy.cumsum(target_sizes))
 
     def print_stats(title, outputs, targets):
         print "Statistics of {0}".format(title)
@@ -312,8 +317,10 @@ def show_stats(result):
                 enumerate(zip(attrconf.multival_titles, attrconf.multival)):
             print "{0}, frequency, TPR, FPR".format(grptitle)
 
-            o = outputs[:, output_seg[i+4]:output_seg[i+5]]
-            t = targets[:, target_seg[i+4]:target_seg[i+5]]
+            offset = len(attrconf.unival)
+
+            o = outputs[:, output_seg[offset+i]:output_seg[offset+i+1]]
+            t = targets[:, target_seg[offset+i]:target_seg[offset+i+1]]
             p = o.round()
 
             freqs, tprs, fprs = [0] * len(grp), [0] * len(grp), [0] * len(grp)
@@ -352,8 +359,11 @@ def show_result(result):
     from PySide import QtGui, QtCore
     from reid.utils.gui_utils import ndarray2qimage
 
-    output_seg = [0, 3, 10, 12, 17, 25, 35, 45, 51, 62, 73, 84, 99]
-    target_seg = [0, 1, 2, 3, 4, 12, 22, 32, 38, 49, 60, 71, 86]
+    output_sizes = [len(grp) for grp in attrconf.unival + attrconf.multival]
+    target_sizes = [1] * len(attrconf.unival) + [len(grp) for grp in attrconf.multival]
+
+    output_seg = [0] + list(numpy.cumsum(output_sizes))
+    target_seg = [0] + list(numpy.cumsum(target_sizes))
 
     def compare_unival(table, output, target):
         cur_row = 0
@@ -382,8 +392,10 @@ def show_result(result):
             table.setItem(cur_row, 0, QtGui.QTableWidgetItem(grptitle))
             cur_row += 1
 
-            o = output[output_seg[i+4]:output_seg[i+5]]
-            t = target[target_seg[i+4]:target_seg[i+5]]
+            offset = len(attrconf.unival)
+
+            o = output[output_seg[offset+i]:output_seg[offset+i+1]]
+            t = target[target_seg[offset+i]:target_seg[offset+i+1]]
             p = o.round()
 
             for j, attrname in enumerate(grp):
@@ -492,8 +504,8 @@ def show_result(result):
 
         def _create_panels(self):
             self.image_panel = QtGui.QLabel()
-            self.unival_table = self._create_table(24)
-            self.multival_table = self._create_table(97)
+            self.unival_table = self._create_table(49)
+            self.multival_table = self._create_table(72)
 
             layout = QtGui.QHBoxLayout()
             layout.addWidget(self.image_panel)
@@ -514,6 +526,7 @@ def show_result(result):
             table.setHorizontalHeader(header)
             table.setHorizontalHeaderLabels(
                 ['Name', 'Target', 'Prediction', 'Output'])
+            table.verticalHeader().setVisible(False)
 
             return table
 
@@ -531,5 +544,5 @@ if __name__ == '__main__':
     model = train_model(dataset)
     result = compute_result(model, dataset, data)
 
-    # show_stats(result)
-    # show_result(result)
+    show_stats(result)
+    show_result(result)
