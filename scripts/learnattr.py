@@ -558,14 +558,12 @@ def show_result(result):
 
 
 if __name__ == '__main__':
-    # data = load_data(attrconf.datasets)
-    # data = decompose(data)
-    # dataset = create_dataset(data)
+    data = load_data(attrconf.datasets)
+    data = decompose(data)
+    dataset = create_dataset(data)
 
-    # model = train_model(dataset)
-    # result = compute_result(model, dataset, data)
-
-    result = cachem.load('result')
+    model = train_model(dataset)
+    result = compute_result(model, dataset, data)
 
     show_stats(result)
     show_result(result)
