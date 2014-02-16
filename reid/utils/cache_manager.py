@@ -21,6 +21,8 @@ class CacheManager(object):
         self.home = home
         self.tag = tag
 
+        if not os.path.isdir(home): os.makedirs(home)
+
     def load(self, task):
         """Load from cache if data file exists
 
