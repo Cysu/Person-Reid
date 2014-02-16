@@ -145,9 +145,9 @@ class MainWindow(QtGui.QMainWindow):
     def prev_pedes(self):
         if self._cur_pedes is None or self._cur_pid is None: return
 
-        if self._cur_pid -1 < 0:
+        if self._cur_pid - 1 < 0:
             msg = QtGui.QMessageBox()
-            msg.setText("Reach the begining of the group")
+            msg.setText("Reach the beginning of the group")
             msg.exec_()
         else:
             self._cur_pid -= 1

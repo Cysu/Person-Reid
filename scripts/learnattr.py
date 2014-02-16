@@ -126,7 +126,7 @@ def create_dataset(data):
 
     if dataset is None:
         from reid.utils.dataset import Dataset
-        from reid.preproc import imageproc, dataproc
+        from reid.preproc import imageproc
 
         def imgprep(img):
             img = imageproc.imresize(img, (80, 30))
@@ -271,11 +271,11 @@ def compute_result(model, dataset, data):
     return result
 
 
-def show_result(result):
-    """Compute the statistics of the result and display them in GUI
+def show_stats(result):
+    """Show the statistics of the result
 
     Args:
-        result: A list of result tuples returned by ``compute_result``
+        result: Tuple returned by ``compute_result``
     """
 
     train, valid, test = result
@@ -341,6 +341,188 @@ def show_result(result):
     print_stats("Testing Set", test[1], test[2])
 
 
+def show_result(result):
+    """Show the result in GUI
+
+    Args:
+        result: Tuples returned by ``compute_result``
+    """
+
+    import sys
+    from PySide import QtGui, QtCore
+    from reid.utils.gui_utils import ndarray2qimage
+
+    output_seg = [0, 3, 10, 12, 17, 25, 35, 45, 51, 62, 73, 84, 99]
+    target_seg = [0, 1, 2, 3, 4, 12, 22, 32, 38, 49, 60, 71, 86]
+
+    def compare_unival(table, output, target):
+        cur_row = 0
+        for i, (grptitle, grp) in \
+                enumerate(zip(attrconf.unival_titles, attrconf.unival)):
+            table.setItem(cur_row, 0, QtGui.QTableWidgetItem(grptitle))
+            cur_row += 1
+
+            o = output[output_seg[i]:output_seg[i+1]]
+            t = target[target_seg[i]:target_seg[i+1]]
+            p = o.argmax()
+
+            for j, attrname in enumerate(grp):
+                table.setItem(cur_row, 0, QtGui.QTableWidgetItem(attrname))
+                table.setItem(cur_row, 1, QtGui.QTableWidgetItem('*' if t[0] == j else ''))
+                table.setItem(cur_row, 2, QtGui.QTableWidgetItem('√' if p == j else ''))
+                table.setItem(cur_row, 3, QtGui.QTableWidgetItem('{0:.5}'.format(o[j])))
+                cur_row += 1
+
+            cur_row += 1
+
+    def compare_multival(table, output, target):
+        cur_row = 0
+        for i, (grptitle, grp) in \
+                enumerate(zip(attrconf.multival_titles, attrconf.multival)):
+            table.setItem(cur_row, 0, QtGui.QTableWidgetItem(grptitle))
+            cur_row += 1
+
+            o = output[output_seg[i+4]:output_seg[i+5]]
+            t = target[target_seg[i+4]:target_seg[i+5]]
+            p = o.round()
+
+            for j, attrname in enumerate(grp):
+                table.setItem(cur_row, 0, QtGui.QTableWidgetItem(attrname))
+                table.setItem(cur_row, 1, QtGui.QTableWidgetItem('*' if t[j] == 1 else ''))
+                table.setItem(cur_row, 2, QtGui.QTableWidgetItem('√' if p[j] == 1 else ''))
+                table.setItem(cur_row, 3, QtGui.QTableWidgetItem('{0:.5}'.format(o[j])))
+                cur_row += 1
+
+            cur_row += 1
+
+
+    class ResultViewer(QtGui.QMainWindow):
+        def __init__(self, sets, parent=None):
+            super(ResultViewer, self).__init__(parent)
+
+            self.set_codec("UTF-8")
+
+            self._sets = sets
+
+            # Set default index to the first pedestrian in training set
+            self._cur_sid = self._cur_pid = 0
+
+            self._create_menus()
+            self._create_panels()
+
+            self.setWindowTitle(self.tr("Result Viewer"))
+            self.showMaximized()
+
+        def set_codec(self, codec_name):
+            codec = QtCore.QTextCodec.codecForName(codec_name)
+            QtCore.QTextCodec.setCodecForLocale(codec)
+            QtCore.QTextCodec.setCodecForCStrings(codec)
+            QtCore.QTextCodec.setCodecForTr(codec)
+
+        @QtCore.Slot()
+        def show_train_set(self):
+            self._cur_sid = 0
+            self._cur_pid = 0
+            self._show_current()
+
+        @QtCore.Slot()
+        def show_valid_set(self):
+            self._cur_sid = 1
+            self._cur_pid = 0
+            self._show_current()
+
+        @QtCore.Slot()
+        def show_test_set(self):
+            self._cur_sid = 2
+            self._cur_pid = 0
+            self._show_current()
+
+        @QtCore.Slot()
+        def show_next_pedes(self):
+            if self._cur_pid + 1 < len(self._sets[self._cur_sid][0]):
+                self._cur_pid += 1
+                self._show_current()
+            else:
+                msg = QtGui.QMessageBox()
+                msg.setText(self.tr("Reach the end of the set"))
+                msg.exec_()
+
+        @QtCore.Slot()
+        def show_prev_pedes(self):
+            if self._cur_pid - 1 >= 0:
+                self._cur_pid -= 1
+                self._show_current()
+            else:
+                msg = QtGui.QMessageBox()
+                msg.setText(self.tr("Reach the beginning of the set"))
+                msg.exec_()
+
+        def _show_current(self):
+            data = self._sets[self._cur_sid]
+            img = data[0][self._cur_pid]
+            output = data[1][self._cur_pid]
+            target = data[2][self._cur_pid]
+
+            pixmap = QtGui.QPixmap.fromImage(ndarray2qimage(img))
+            self.image_panel.setPixmap(pixmap)
+            compare_unival(self.unival_table, output, target)
+            compare_multival(self.multival_table, output, target)
+
+        def _create_menus(self):
+            menu_bar = self.menuBar()
+
+            sets_menu = menu_bar.addMenu("&Sets")
+            sets_menu.addAction(self.tr("Training Set"),
+                                self, QtCore.SLOT("show_train_set()"),
+                                QtGui.QKeySequence(self.tr("Ctrl+1")))
+            sets_menu.addAction(self.tr("Validation Set"),
+                                self, QtCore.SLOT("show_valid_set()"),
+                                QtGui.QKeySequence(self.tr("Ctrl+2")))
+            sets_menu.addAction(self.tr("Testing Set"),
+                                self, QtCore.SLOT("show_test_set()"),
+                                QtGui.QKeySequence(self.tr("Ctrl+3")))
+ 
+            pedes_menu = menu_bar.addMenu("&Pedestrians")
+            pedes_menu.addAction(self.tr("Next"),
+                                 self, QtCore.SLOT("show_next_pedes()"),
+                                 QtGui.QKeySequence.Forward)
+            pedes_menu.addAction(self.tr("Prev"),
+                                 self, QtCore.SLOT("show_prev_pedes()"),
+                                 QtGui.QKeySequence.Back)
+
+        def _create_panels(self):
+            self.image_panel = QtGui.QLabel()
+            self.unival_table = self._create_table(24)
+            self.multival_table = self._create_table(97)
+
+            layout = QtGui.QHBoxLayout()
+            layout.addWidget(self.image_panel)
+            layout.addWidget(self.unival_table)
+            layout.addWidget(self.multival_table)
+
+            frame = QtGui.QWidget()
+            frame.setLayout(layout)
+
+            self.setCentralWidget(frame)
+
+        def _create_table(self, n_rows):
+            header = QtGui.QHeaderView(QtCore.Qt.Orientation.Horizontal)
+            header.setResizeMode(QtGui.QHeaderView.ResizeToContents)
+
+            table = QtGui.QTableWidget(n_rows, 4)
+            table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
+            table.setHorizontalHeader(header)
+            table.setHorizontalHeaderLabels(
+                ['Name', 'Target', 'Prediction', 'Output'])
+
+            return table
+
+    app = QtGui.QApplication(sys.argv)
+    viewer = ResultViewer(result)
+    viewer.show()
+    sys.exit(app.exec_())
+
+
 if __name__ == '__main__':
     data = load_data(attrconf.datasets)
     data = decompose(data)
@@ -349,4 +531,5 @@ if __name__ == '__main__':
     model = train_model(dataset)
     result = compute_result(model, dataset, data)
 
-    show_result(result)
+    # show_stats(result)
+    # show_result(result)
