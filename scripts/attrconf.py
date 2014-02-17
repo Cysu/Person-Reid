@@ -17,11 +17,11 @@ unival = [
 ]
 
 unival_titles = [
-    'Hair Color'
+    'Hair Color',
     'Hair Style',
     'Footwear Color',
     'Footwear Style',
-    'Lower Body Color'
+    'Lower Body Color',
     'Gender',
     'Age'
 ]
