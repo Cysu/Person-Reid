@@ -13,7 +13,7 @@ unival = [
     ['footwearBoots', 'footwearLeatherShoes', 'footwearSandals', 'footwearShoes', 'footwearSneakers'],
     ['lowerBodyBlack', 'lowerBodyBlue', 'lowerBodyBrown', 'lowerBodyGreen', 'lowerBodyGrey', 'lowerBodyOrange', 'lowerBodyPink', 'lowerBodyPurple', 'lowerBodyRed', 'lowerBodyWhite', 'lowerBodyYellow'],
     ['personalFemale', 'personalMale'],
-    ['personalLess15', 'personalLess30', 'personalLess45', 'personalLess60', 'personalLarger60'],
+    ['personalLess15', 'personalLess30', 'personalLess45', 'personalLess60', 'personalLarger60']
 ]
 
 unival_titles = [
