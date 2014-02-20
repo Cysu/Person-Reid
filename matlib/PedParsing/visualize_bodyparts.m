@@ -1,5 +1,6 @@
-function visualize_bodyparts(dname, colormap)
+function visualize_bodyparts(dname)
 
+load('colormap.mat');
 load(fullfile('..', '..', 'data', 'attributes', [dname '_parse.mat']));
 
 m = 3;
@@ -23,7 +24,7 @@ for i = 1:m*n
     hold on;
     h = imshow(bdparts, colormap);
     hold off;
-    set(h, 'AlphaData', (bdparts > 0) * 0.3);
+    set(h, 'AlphaData', (bdparts > 0) * 1);
 end
 
 end
