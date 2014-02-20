@@ -1,6 +1,8 @@
 %% Load dataset
 
 run('attrconf.m');
+addpath(genpath(fullfile('..', 'feature')));
+addpath(genpath(fullfile('..', 'classifier')));
 
 m = 0;
 for t = 1:length(datasets)
@@ -54,7 +56,7 @@ schmid = {
 X = zeros(n_feat, m);
 Y = zeros(n_attr, m);
 
-hwait = waitbar(0, 'Extract features 0%%');
+hwait = waitbar(0, 'Extract features 0%');
 for i = 1:m
     X(:, i) = rlayne_extract_feature(imgs{i}, gabor, schmid);
     Y(:, i) = logical(attrs{i});
@@ -62,9 +64,12 @@ for i = 1:m
 end
 close(hwait);
 
+% Shuffle and sub-sampling
 inds = randperm(m);
-X = X(:, inds);
-Y = Y(:, inds);
+X = X(:, inds(1:ceil(m/4)));
+Y = Y(:, inds(1:ceil(m/4)));
+
+m = ceil(m/4);
 
 n_train = ceil(m * 0.7);
 train_X = X(:, 1:n_train);
@@ -85,7 +90,7 @@ for i = 1:n_attr
     models{i} = svmtrain(train_Y(i, :)', train_X', '-t 5 -b 1 -q');
 end
 
-save('rlayne_model.mat', 'models');
+save('rlayne_model.mat', 'models', '-v7.3');
 
 %% Test the SVM models
 if exist('rlayne_model.mat', 'file') && ~exist('models', 'var')
