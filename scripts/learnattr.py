@@ -200,7 +200,7 @@ def train_model(dataset):
             [actfuncs.sigmoid] * len(attrconf.multival)
         )
 
-        feature_model = NeuralNet([input_decomp, columns, feature_comp, classify_1, classify_2, attr_decomp])
+        model = NeuralNet([input_decomp, columns, feature_comp, classify_1, classify_2, attr_decomp])
 
         attr_model = NeuralNet([input_decomp, columns, feature_comp, classify_1, classify_2, attr_decomp],
                                const_params=[True, True, True, False, False, True])
@@ -215,13 +215,13 @@ def train_model(dataset):
         error_functions = [costfuncs.mean_number_misclassified] * len(attrconf.unival) + \
                           [costfuncs.mean_zeroone_error_rate] * len(attrconf.multival)
 
-        evaluator = Evaluator(feature_model, cost_functions, error_functions, adapter,
+        evaluator = Evaluator(model, cost_functions, error_functions, adapter,
                               regularize=1e-3)
 
         # Train the feature extraction model
         sgd.train(evaluator, dataset,
                   learning_rate=5e-3, momentum=0.9,
-                  batch_size=300, n_epoch=50,
+                  batch_size=300, n_epoch=60,
                   learning_rate_decr=1.0, patience_incr=1.5)
 
         # Train the attribute detector model
@@ -230,7 +230,7 @@ def train_model(dataset):
 
         sgd.train(evaluator, dataset,
                   learning_rate=1e-3, momentum=0.9,
-                  batch_size=300, n_epoch=100,
+                  batch_size=300, n_epoch=40,
                   learning_rate_decr=1.0, patience_incr=1.5)
 
     return model
