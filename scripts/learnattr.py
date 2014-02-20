@@ -182,7 +182,7 @@ def train_model(dataset):
         target_sizes = [1] * len(attrconf.unival) + [len(grp) for grp in attrconf.multival]
 
         # Build up model
-        input_decomp = DecompLayer([(3,80,30)] * 4)
+        input_decomp = DecompLayer([(3,80,30)] * len(bodyconf.groups))
 
         columns = MultiwayNeuralNet([NeuralNet([
             ConvPoolLayer((64,3,3,3), (2,2), (3,80,30), actfuncs.tanh, False),
