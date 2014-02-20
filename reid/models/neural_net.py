@@ -8,16 +8,37 @@ from reid.models.layers import FullConnLayer
 class NeuralNet(Block):
     """Composite blocks in a sequential manner"""
 
-    def __init__(self, blocks):
+    def __init__(self, blocks, const_params=None):
+        """Initialize the neural network
+
+        Args:
+            blocks: A list of sub networks
+            const_params: A list of boolean values indicating whether the
+                parameters of corresponding sub network is constant, i.e.,
+                the parameters will not be updated when doing gradient
+                descent. None if all of them are not constant.
+        """
+
         super(NeuralNet, self).__init__()
 
         self._blocks = blocks
 
+        if const_params is None:
+            const_params = [False] * len(blocks)
+
         self._params = []
-        for block in blocks:
-            self._params.extend(block.parameters)
+        for block, is_const in zip(blocks, const_params):
+            if not is_const:
+                self._params.extend(block.parameters)
 
     def get_output(self, x):
+        """Get the final result of passing input data to each sub network
+        sequentially
+
+        Args:
+            x: A theano matrix with each row being a feature vector
+        """
+
         for block in self._blocks:
             y = block.get_output(x)
             x = y
