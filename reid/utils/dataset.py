@@ -3,6 +3,7 @@
 
 import numpy
 import theano
+from reid.utils.math_utils import numpy_rng
 
 
 class Dataset(object):
@@ -57,7 +58,7 @@ class Dataset(object):
         m_train = int(m * train_ratio)
         m_valid = int(m * valid_ratio)
 
-        p = numpy.random.permutation(m)
+        p = numpy_rng.permutation(m)
 
         self.train_ind = p[0 : m_train]
         self.valid_ind = p[m_train : m_train+m_valid]

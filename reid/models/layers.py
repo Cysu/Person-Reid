@@ -4,7 +4,6 @@
 import numpy
 import theano
 import theano.tensor as T
-
 from reid.models.block import Block
 from reid.models import active_functions as actfuncs
 from reid.utils.math_utils import numpy_rng
