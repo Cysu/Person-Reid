@@ -1,4 +1,4 @@
-function mark_datasets_bodyparts(dname, model_coarse, model_fine)
+function parse_attributes_dataset(dname, model_coarse, model_fine)
 
 load(fullfile('..', '..', 'data', 'attributes', [dname '.mat']));
 
@@ -25,4 +25,3 @@ close(hwait);
 clear images attributes;
 
 end
-

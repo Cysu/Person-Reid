@@ -47,7 +47,7 @@ def load_data(datasets):
 
 @cachem.save('decomp')
 def decompose(rawdata, dilation_radius=3):
-    """Decompose pedestrain into several body parts groups and 
+    """Decompose pedestrain into several body parts groups
 
     This function will generate an image containing only the region of
     particular body parts for each group.
@@ -115,7 +115,7 @@ def create_dataset(data):
     into a vector.
 
     Args:
-        data: A list of pedestrian tuples returned by ``decomp_body``
+        data: A list of pedestrian tuples returned by ``decompose``
 
     Returns:
         A Dataset object to be used for model training, validation and
@@ -202,9 +202,6 @@ def train_model(dataset):
 
         model = NeuralNet([input_decomp, columns, feature_comp, classify_1, classify_2, attr_decomp])
 
-        attr_model = NeuralNet([input_decomp, columns, feature_comp, classify_1, classify_2, attr_decomp],
-                               const_params=[True, True, True, False, False, True])
-
         # Build up adapter
         adapter = DecompLayer([(sz,) for sz in target_sizes])
 
@@ -221,16 +218,7 @@ def train_model(dataset):
         # Train the feature extraction model
         sgd.train(evaluator, dataset,
                   learning_rate=5e-3, momentum=0.9,
-                  batch_size=300, n_epoch=60,
-                  learning_rate_decr=1.0, patience_incr=1.5)
-
-        # Train the attribute detector model
-        evaluator = Evaluator(attr_model, cost_functions, error_functions, adapter,
-                              regularize=1e-3)
-
-        sgd.train(evaluator, dataset,
-                  learning_rate=1e-3, momentum=0.9,
-                  batch_size=300, n_epoch=40,
+                  batch_size=300, n_epoch=200,
                   learning_rate_decr=1.0, patience_incr=1.5)
 
     return model

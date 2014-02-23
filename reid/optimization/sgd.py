@@ -32,9 +32,9 @@ def train(evaluator, datasets, learning_rate=1e-4, momentum=0,
     """
 
     # Setup parameters
-    n_train_batches = datasets.train_x.get_value(borrow=True).shape[0] / batch_size
-    n_valid_batches = datasets.valid_x.get_value(borrow=True).shape[0] / batch_size
-    n_test_batches = datasets.test_x.get_value(borrow=True).shape[0] / batch_size
+    n_train_batches = datasets.train_x.get_value(borrow=True).shape[0] / batch_size + 1
+    n_valid_batches = datasets.valid_x.get_value(borrow=True).shape[0] / batch_size + 1
+    n_test_batches = datasets.test_x.get_value(borrow=True).shape[0] / batch_size + 1
 
     # Setup training, validation and testing functions
     x = T.matrix('x') # input data
