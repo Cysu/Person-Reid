@@ -108,6 +108,8 @@ class LabellingWindow(QtGui.QMainWindow):
     def save(self):
         if self.fpath is None: return
 
+        self.record()
+
         savemat(self.fpath, {
             'images': self.mat_images,
             'attributes': self.mat_attributes
@@ -316,31 +318,29 @@ class LabellingWindow(QtGui.QMainWindow):
             self._multival_groups.append(group)
             multival_gboxes[i].setLayout(layout)
 
-        utab_layout = QtGui.QGridLayout()
+        layout = QtGui.QGridLayout()
         for i, gbox in enumerate(unival_gboxes):
             r, c = i // 5, i % 5
             if r == 2:
                 r = 1
                 c = 5
-            utab_layout.addWidget(gbox, r, c)
+            layout.addWidget(gbox, r, c)
 
-        utab = QtGui.QWidget()
-        utab.setLayout(utab_layout)
-
-        mtab_layout = QtGui.QGridLayout()
         for i, gbox in enumerate(multival_gboxes):
-            r, c = i // 5, i % 5
-            mtab_layout.addWidget(gbox, r, c)
+            if i < 2:
+                r = 1
+                c = 6 + i
+            else:
+                r = 0
+                c = 3 + i
+            layout.addWidget(gbox, r, c)
 
-        mtab = QtGui.QWidget()
-        mtab.setLayout(mtab_layout)
-
-        tabs = QtGui.QTabWidget()
-        tabs.addTab(utab, self.tr("Unique"))
-        tabs.addTab(mtab, self.tr("Multiple"))
+        attrpanel = QtGui.QWidget()
+        attrpanel.setLayout(layout)
 
         sa = QtGui.QScrollArea()
-        sa.setWidget(tabs)
+        sa.setBackgroundRole(QtGui.QPalette.Base)
+        sa.setWidget(attrpanel)
 
         layout = QtGui.QHBoxLayout()
         layout.addWidget(self._gallery)

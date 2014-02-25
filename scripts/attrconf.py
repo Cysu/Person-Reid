@@ -45,6 +45,7 @@ names = [
     'upperBodyRed',
     'upperBodyWhite',
     'upperBodyYellow',
+    'upperBodyOtherColor',
     'upperBodyCoat',
     'upperBodyDownCoat',
     'upperBodyDress',
@@ -74,6 +75,7 @@ names = [
     'lowerBodyRed',
     'lowerBodyWhite',
     'lowerBodyYellow',
+    'lowerBodyOtherColor',
     'lowerBodyJeans',
     'lowerBodyPants',
     'lowerBodySports',
@@ -101,6 +103,7 @@ names = [
     'hairRed',
     'hairWhite',
     'hairYellow',
+    'hairOtherColor',
     'hairBald',
     'hairBrushCut',
     'hairMidLength',
@@ -113,11 +116,11 @@ unival = [
     ['raceAsian', 'raceBlack', 'raceWhite'],
     ['upperBodyNoSleeve', 'upperBodyShortSleeve', 'upperBodyLongSleeve'],
     ['upperBodyLogo', 'upperBodyPlaid', 'upperBodyHStripe', 'upperBodyVStripe', 'upperBodyOtherTexture', 'upperBodyNoTexture'],
-    ['lowerBodyBlack', 'lowerBodyBlue', 'lowerBodyBrown', 'lowerBodyGreen', 'lowerBodyGrey', 'lowerBodyOrange', 'lowerBodyPink', 'lowerBodyPurple', 'lowerBodyRed', 'lowerBodyWhite', 'lowerBodyYellow'],
+    ['lowerBodyBlack', 'lowerBodyBlue', 'lowerBodyBrown', 'lowerBodyGreen', 'lowerBodyGrey', 'lowerBodyOrange', 'lowerBodyPink', 'lowerBodyPurple', 'lowerBodyRed', 'lowerBodyWhite', 'lowerBodyYellow', 'lowerBodyOtherColor'],
     ['lowerBodyJeans', 'lowerBodyPants', 'lowerBodySports', 'lowerBodySkirt', 'lowerBodyStockings', 'lowerBodySuit', 'lowerBodyOtherStyle'],
     ['lowerBodyShort', 'lowerBodyCapri', 'lowerBodyLong'],
     ['lowerBodyLogo', 'lowerBodyPlaid', 'lowerBodyHStripe', 'lowerBodyVStripe', 'lowerBodyOtherTexture', 'lowerBodyNoTexture'],
-    ['hairBlack', 'hairBlue', 'hairBrown', 'hairGreen', 'hairGrey', 'hairOrange', 'hairPink', 'hairPurple', 'hairRed', 'hairWhite', 'hairYellow'],
+    ['hairBlack', 'hairBlue', 'hairBrown', 'hairGreen', 'hairGrey', 'hairOrange', 'hairPink', 'hairPurple', 'hairRed', 'hairWhite', 'hairYellow', 'hairOtherColor'],
     ['hairBald', 'hairBrushCut', 'hairMidLength', 'hairLong']
 ]
 
@@ -138,7 +141,7 @@ unival_titles = [
 multival = [
     ['accessoryCap', 'accessoryFaceMask', 'accessoryGlasses', 'accessoryHairBand', 'accessoryHat', 'accessoryHeadphone', 'accessoryKerchief', 'accessoryMuffler', 'accessorySunglasses', 'accessoryTie', 'accessoryOther', 'accessoryNothing'],
     ['carryingBackpack', 'carryingHandbag', 'carryingLuggageCase', 'carryingOutwear', 'carryingShoppingBag', 'carryingShoulderBag', 'carryingUmbrella', 'carryingOther', 'carryingNothing'],
-    ['upperBodyBlack', 'upperBodyBlue', 'upperBodyBrown', 'upperBodyGreen', 'upperBodyGrey', 'upperBodyOrange', 'upperBodyPink', 'upperBodyPurple', 'upperBodyRed', 'upperBodyWhite', 'upperBodyYellow'],
+    ['upperBodyBlack', 'upperBodyBlue', 'upperBodyBrown', 'upperBodyGreen', 'upperBodyGrey', 'upperBodyOrange', 'upperBodyPink', 'upperBodyPurple', 'upperBodyRed', 'upperBodyWhite', 'upperBodyYellow', 'upperBodyOtherColor'],
     ['upperBodyCoat', 'upperBodyDownCoat', 'upperBodyDress', 'upperBodyJacket', 'upperBodyShirt', 'upperBodySweater', 'upperBodySuit', 'upperBodyTshirt', 'upperBodyOtherStyle']
 ]
 
