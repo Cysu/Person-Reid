@@ -32,4 +32,5 @@ def ndarray2qimage(array):
     else:
         raise ValueError("ndarray2qimage cannot recognize the image type")
 
-    return QImage(data.ravel(), w, h, QImage.Format_RGB32).copy()
+    data = data.ravel()
+    return QImage(data, w, h, QImage.Format_RGB32).copy()
