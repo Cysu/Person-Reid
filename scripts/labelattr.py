@@ -214,7 +214,7 @@ class LabellingWindow(QtGui.QMainWindow):
                 k = attrconf.names.index(name)
                 grp.button(j).setChecked(attr[k, 0])
 
-        self._status.setText('{0} / {1}'.format(pid, self.mat_images.shape[0]))
+        self._status.setText('{0} / {1}'.format(pid+1, self.mat_images.shape[0]))
 
     def check_pid(self, pid, alert=True):
         attr = self.mat_attributes[pid, 0]
