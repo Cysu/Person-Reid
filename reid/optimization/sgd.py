@@ -7,7 +7,7 @@ import theano
 import theano.tensor as T
 
 
-def train(evaluator, datasets, learning_rate=1e-4, momentum=0,
+def train(evaluator, datasets, learning_rate=1e-4, momentum=0.9,
           batch_size=10, n_epoch=100,
           improvement=1-1e-3, patience_incr=2.0, learning_rate_decr=0.95,
           never_stop=False):
@@ -40,19 +40,22 @@ def train(evaluator, datasets, learning_rate=1e-4, momentum=0,
     x = T.matrix('x') # input data
     y = T.matrix('y') # corresponding targets
     i = T.lscalar('i') # batch index
-    alpha = T.scalar('alpha')
+    alpha = T.scalar('alpha') # learning rate
+    dummy = T.scalar('dummy') # for param update
 
     # Compute the cost, updates and error
-    cost, updates = evaluator.get_cost_updates(x, y, alpha, momentum)
+    cost, inc_updates, param_updates = evaluator.get_cost_updates(x, y, alpha, momentum)
     error = evaluator.get_error(x, y)
 
     # Build training, validation and testing functions
-    train_func = theano.function(
-        inputs=[i, alpha], outputs=cost, updates=updates,
+    inc_update_func = theano.function(
+        inputs=[i, alpha], outputs=cost, updates=inc_updates,
         givens={
             x: datasets.train_x[i*batch_size : (i+1)*batch_size],
             y: datasets.train_y[i*batch_size : (i+1)*batch_size]
         })
+    param_update_func = theano.function(
+        inputs=[dummy], outputs=dummy, updates=param_updates)
 
     valid_func = theano.function(
         inputs=[i], outputs=error,
@@ -91,7 +94,8 @@ def train(evaluator, datasets, learning_rate=1e-4, momentum=0,
                 cur_iter = epoch * n_train_batches + j
 
                 # train
-                batch_cost = train_func(j, learning_rate)
+                batch_cost = inc_update_func(j, learning_rate)
+                param_update_func(0)
                 print "[train] batch {0}/{1}, iter {2}, cost {3}".format(
                     j+1, n_train_batches, cur_iter, batch_cost)
 

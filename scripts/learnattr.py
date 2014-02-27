@@ -3,7 +3,7 @@
 
 import os
 import numpy
-import attrconf
+import attrconf_old as attrconf
 import bodyconf
 from reid.utils.cache_manager import CacheManager
 
@@ -217,7 +217,7 @@ def train_model(dataset):
 
         # Train the feature extraction model
         sgd.train(evaluator, dataset,
-                  learning_rate=5e-3, momentum=0.9,
+                  learning_rate=1e-3, momentum=0.9,
                   batch_size=300, n_epoch=200,
                   learning_rate_decr=1.0, patience_incr=1.5)
 

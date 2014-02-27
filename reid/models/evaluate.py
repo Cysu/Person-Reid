@@ -37,7 +37,7 @@ class Evaluator(object):
         self._regularize = regularize
         self._norm = norm
 
-    def get_cost_updates(self, x, target, learning_rate, momentum=0):
+    def get_cost_updates(self, x, target, learning_rate, momentum):
         """Get the cost value and tensor update list for model training
 
         Args:
@@ -47,8 +47,7 @@ class Evaluator(object):
             momentum: A scalar controling the momentum
 
         Returns:
-            Tuple (cost, updates) where cost is a scalar and updates is a list
-            of updating parameters
+            Tuple (cost, inc_updates, param_updates)
         """
 
         # Compute the output
@@ -72,23 +71,21 @@ class Evaluator(object):
         grads = T.grad(cost, self._model.parameters)
 
         # Compute the updates
-        if momentum > 0:
-            create_empty = lambda p: theano.shared(
-                numpy.zeros(p.get_value(borrow=True).shape, dtype=p.dtype),
-                borrow=True
-            )
+        create_empty = lambda p: theano.shared(
+            numpy.zeros(p.get_value(borrow=True).shape, dtype=p.dtype),
+            borrow=True
+        )
 
-            prev_grads = [create_empty(p) for p in self._model.parameters]
+        incs = [create_empty(p) for p in self._model.parameters]
 
-            updates = []
-            for p, g, g_prime in zip(self._model.parameters, grads, prev_grads):
-                updates.append((p, p - learning_rate*(g + momentum*g_prime)))
-                updates.append((g_prime, g))
-        else:
-            updates = [(p, p-learning_rate*g)
-                       for p, g in zip(self._model.parameters, grads)]
+        param_updates = []
+        inc_updates = []
 
-        return (cost, updates)
+        for p, g, inc in zip(self._model.parameters, grads, incs):
+            inc_updates.append((inc, momentum*inc - learning_rate*g))
+            param_updates.append((p, p + inc))
+
+        return (cost, inc_updates, param_updates)
 
     def get_error(self, x, target):
         """Get the error value
