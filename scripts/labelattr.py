@@ -8,7 +8,7 @@ import numpy
 import attrconf
 from scipy.io import loadmat, savemat
 from PySide import QtGui, QtCore
-from reid.utils.gui_images_gallery import ImagesGallery
+from reid.utils.gui_utils import ndarray2qimage
 
 
 class LabellingWindow(QtGui.QMainWindow):
@@ -108,8 +108,6 @@ class LabellingWindow(QtGui.QMainWindow):
     def save(self):
         if self.fpath is None: return
 
-        self.record()
-
         savemat(self.fpath, {
             'images': self.mat_images,
             'attributes': self.mat_attributes
@@ -130,8 +128,6 @@ class LabellingWindow(QtGui.QMainWindow):
 
     @QtCore.Slot()
     def next(self):
-        self.record()
-
         if self._check_labelling_act.isChecked() and \
             not self.check_pid(self.cur_pid): return
 
@@ -141,8 +137,6 @@ class LabellingWindow(QtGui.QMainWindow):
 
     @QtCore.Slot()
     def prev(self):
-        self.record()
-
         if self._check_labelling_act.isChecked() and \
             not self.check_pid(self.cur_pid): return
 
@@ -152,8 +146,6 @@ class LabellingWindow(QtGui.QMainWindow):
 
     @QtCore.Slot()
     def next_unlabelled(self):
-        self.record()
-
         if self._check_labelling_act.isChecked() and \
             not self.check_pid(self.cur_pid): return
 
@@ -168,52 +160,136 @@ class LabellingWindow(QtGui.QMainWindow):
             self.cur_pid = i
             self.show_pid(i)
 
-    def record(self):
-        self.is_dirty = True
-        self.setWindowTitle(self.tr("Attribute Labelling *"))
+    @QtCore.Slot()
+    def update_attr(self):
+        # Check conflicts in memory
+        attr = numpy.zeros_like(self.mat_attributes[self.cur_pid, 0][0, 0])
 
-        attr = numpy.zeros_like(self.mat_attributes[self.cur_pid, 0])
+        for item in self._gallery.selectedItems():
+            v, k = map(int, item.text().split(','))
+            attr += self.mat_attributes[self.cur_pid, v][0, k]
 
-        for i, grp in enumerate(self._unival_groups):
-            j = grp.checkedId()
-            if j >= 0:
-                k = attrconf.names.index(attrconf.unival[i][j])
-                attr[k, 0] = 1
+        nselect = len(self._gallery.selectedItems())
 
-        for i, grp in enumerate(self._multival_groups):
-            for j, button in enumerate(grp.buttons()):
-                if button.isChecked():
-                    k = attrconf.names.index(attrconf.multival[i][j])
-                    attr[k, 0] = 1
+        self._uconf = [False] * len(self._unival_groups)
+        self._mconf = [False] * len(self._multival_groups)
 
-        self.mat_attributes[self.cur_pid, 0] = attr
+        for i in xrange(len(self._uconf)):
+            for a in attrconf.unival[i]:
+                k = attrconf.names.index(a)
+                if attr[k, 0] != 0 and attr[k, 0] != nselect:
+                    self._uconf[i] = True
+                    break
 
-    def show_pid(self, pid):
-        imgs = []
-        for v in xrange(self.mat_images.shape[1]):
-            if self.mat_images[pid, v].size == 0: break
-            for k in xrange(self.mat_images[pid, v].shape[1]):
-                imgs.append(self.mat_images[pid, v][0, k])
+        for i in xrange(len(self._mconf)):
+            for a in attrconf.multival[i]:
+                k = attrconf.names.index(a)
+                if attr[k, 0] != 0 and attr[k, 0] != nselect:
+                    self._mconf[i] = True
+                    break
 
-        self._gallery.show_images(imgs)
+        # Set group color for hint of conflict
+        self.hint_for_conflict()
 
-        attr = self.mat_attributes[pid, 0]
-
+        # Set button state
         for i, grp in enumerate(self._unival_groups):
             grp.setExclusive(False)
             for button in grp.buttons():
                 button.setChecked(False)
             grp.setExclusive(True)
 
-            for j, name in enumerate(attrconf.unival[i]):
-                k = attrconf.names.index(name)
-                grp.button(j).setChecked(attr[k, 0])
+            if not self._uconf[i]:
+                for j, name in enumerate(attrconf.unival[i]):
+                    k = attrconf.names.index(name)
+                    grp.button(j).setChecked(attr[k, 0] > 0)
 
         for i, grp in enumerate(self._multival_groups):
             for j, name in enumerate(attrconf.multival[i]):
                 k = attrconf.names.index(name)
-                grp.button(j).setChecked(attr[k, 0])
+                if attr[k, 0] != 0 and attr[k, 0] != nselect:
+                    grp.button(j).setTristate(True)
+                    grp.button(j).setCheckState(QtCore.Qt.PartiallyChecked)
+                else:
+                    grp.button(j).setTristate(False)
+                    grp.button(j).setChecked(attr[k, 0] > 0)
 
+    @QtCore.Slot()
+    def record_attr(self):
+        self.is_dirty = True
+        self.setWindowTitle(self.tr("Attribute Labelling *"))
+
+        # Check conflicts in button states
+        attr = numpy.zeros_like(self.mat_attributes[self.cur_pid, 0][0, 0])
+        mask = numpy.zeros_like(attr)
+
+        for i, grp in enumerate(self._unival_groups):
+            if grp.checkedId() == -1: continue
+            self._uconf[i] = False
+            for j, a in enumerate(attrconf.unival[i]):
+                k = attrconf.names.index(a)
+                mask[k, 0] = 1
+                if j == grp.checkedId(): attr[k, 0] = 1
+
+        for i, grp in enumerate(self._multival_groups):
+            self._mconf[i] = False
+            for j, button in enumerate(grp.buttons()):
+                state = button.checkState()
+                k = attrconf.names.index(attrconf.multival[i][j])
+                if button.isTristate():
+                    if state == QtCore.Qt.PartiallyChecked:
+                        self._mconf[i] = True
+                    elif state == QtCore.Qt.Checked:
+                        button.setTristate(False)
+                        attr[k, 0] = mask[k, 0] = 1
+                    else:
+                        button.setTristate(False)
+                        mask[k, 0] = 1
+                else:
+                    if state == QtCore.Qt.Checked:
+                        attr[k, 0] = mask[k, 0] = 1
+                    else:
+                        mask[k, 0] = 1
+
+        # Set group color for hint of conflict
+        self.hint_for_conflict()
+
+        # Record to selected images
+        ind = numpy.where(mask == 1)
+        for item in self._gallery.selectedItems():
+            v, k = map(int, item.text().split(','))
+            self.mat_attributes[self.cur_pid, v][0, k][ind] = attr[ind]
+
+    def hint_for_conflict(self):
+        def setbg(gbox, color):
+            gbox.setStyleSheet('background-color: {0}'.format(color))
+
+        for i, gbox in enumerate(self._unival_gboxes):
+            setbg(gbox, '#FF4136' if self._uconf[i] else 'white')
+
+        for i, gbox in enumerate(self._multival_gboxes):
+            setbg(gbox, '#FF4136' if self._mconf[i] else 'white')
+
+    def show_pid(self, pid):
+        # Show images
+        self._gallery.itemSelectionChanged.disconnect(self.update_attr)
+        self._gallery.clear()
+
+        for v in xrange(self.mat_images.shape[1]):
+            if self.mat_images[pid, v].size == 0: break
+            for k in xrange(self.mat_images[pid, v].shape[1]):
+                img = ndarray2qimage(self.mat_images[pid, v][0, k])
+                item = QtGui.QListWidgetItem(
+                    QtGui.QIcon(QtGui.QPixmap.fromImage(img)),
+                    '{0},{1}'.format(v, k))
+                self._gallery.addItem(item)
+                item.setSelected(True)
+
+        self._gallery.itemSelectionChanged.connect(self.update_attr)
+
+        # Show attributes
+        self.update_attr()
+
+        # Show status
         self._status.setText('{0} / {1}'.format(pid+1, self.mat_images.shape[0]))
 
     def check_pid(self, pid, alert=True):
@@ -283,12 +359,23 @@ class LabellingWindow(QtGui.QMainWindow):
         toolbar.addAction(self._check_labelling_act)
 
     def _create_panels(self):
-        self._gallery = ImagesGallery(layout='Grid', n_cols=5)
+        # Images list
+        self._gallery = QtGui.QListWidget()
+        self._gallery.setMinimumWidth(600)
+        self._gallery.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Ignored)
+        self._gallery.setViewMode(QtGui.QListWidget.IconMode)
+        self._gallery.setResizeMode(QtGui.QListWidget.Adjust)
+        self._gallery.setIconSize(QtCore.QSize(640, 240))
+        self._gallery.setDragDropMode(QtGui.QListWidget.NoDragDrop)
+        self._gallery.setSpacing(10)
+        self._gallery.setSelectionMode(QtGui.QListWidget.ExtendedSelection)
+        self._gallery.itemSelectionChanged.connect(self.update_attr)
 
-        unival_gboxes = \
+        # Attributes buttons
+        self._unival_gboxes = \
             [QtGui.QGroupBox(title) for title in attrconf.unival_titles]
 
-        multival_gboxes = \
+        self._multival_gboxes = \
             [QtGui.QGroupBox(title) for title in attrconf.multival_titles]
 
         self._unival_groups = []
@@ -300,11 +387,12 @@ class LabellingWindow(QtGui.QMainWindow):
             layout = QtGui.QVBoxLayout()
             for j, a in enumerate(attrconf.unival[i]):
                 button = QtGui.QRadioButton(self.tr(self.trim(a)))
+                button.clicked.connect(self.record_attr)
                 group.addButton(button, j)
                 layout.addWidget(button)
             layout.addStretch(1)
             self._unival_groups.append(group)
-            unival_gboxes[i].setLayout(layout)
+            self._unival_gboxes[i].setLayout(layout)
 
         for i in xrange(len(attrconf.multival)):
             group = QtGui.QButtonGroup()
@@ -312,21 +400,23 @@ class LabellingWindow(QtGui.QMainWindow):
             layout = QtGui.QVBoxLayout()
             for j, a in enumerate(attrconf.multival[i]):
                 button = QtGui.QCheckBox(self.tr(self.trim(a)))
+                button.clicked.connect(self.record_attr)
                 group.addButton(button, j)
                 layout.addWidget(button)
             layout.addStretch(1)
             self._multival_groups.append(group)
-            multival_gboxes[i].setLayout(layout)
+            self._multival_gboxes[i].setLayout(layout)
 
+        # Custom layout
         layout = QtGui.QGridLayout()
-        for i, gbox in enumerate(unival_gboxes):
+        for i, gbox in enumerate(self._unival_gboxes):
             r, c = i // 5, i % 5
             if r == 2:
                 r = 1
                 c = 5
             layout.addWidget(gbox, r, c)
 
-        for i, gbox in enumerate(multival_gboxes):
+        for i, gbox in enumerate(self._multival_gboxes):
             if i < 2:
                 r = 1
                 c = 6 + i
