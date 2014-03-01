@@ -210,3 +210,32 @@ class DecompLayer(Block):
                 ret[i] = self._active_funcs[i](ret[i])
 
         return ret
+
+
+class FilterParingLayer(Block):
+    """Filter paring layer
+
+    """
+
+    def __init__(self, image_shape, maxout_grouping=None):
+        self._image_shape = image_shape
+        self._maxout_grouping = maxout_grouping
+
+    def get_output(self, xa, xb):
+        n_samples = xa.shape[0]
+        n_channels, h, w = self._image_shape
+
+        xa = xa.reshape(n_samples*n_channels*h, w)
+        xb = xb.reshape(n_samples*n_channels*h, w)
+
+        y = [xa[:, i].dimshuffle(0, 'x') * xb for i in xrange(w)]
+        y = T.concatenate(y, axis=1)
+
+        if self._maxout_grouping is None:
+            y = y.reshape([n_samples, n_channels, h, w, w]).max(axis=1)
+        else:
+            n_groups = self._maxout_grouping
+            y = y.reshape([n_samples, n_groups, n_channels/n_groups, h, w])
+            y = y.max(axis=1).reshape([n_samples, n_channels/n_groups*h, w, w])
+
+        return y
