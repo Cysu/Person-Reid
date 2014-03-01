@@ -217,9 +217,10 @@ class FilterParingLayer(Block):
 
     """
 
-    def __init__(self, image_shape, maxout_grouping=None):
+    def __init__(self, image_shape, maxout_grouping=None, flatten_output=False):
         self._image_shape = image_shape
         self._maxout_grouping = maxout_grouping
+        self._flatten_output = flatten_output
 
     def get_output(self, xa, xb):
         n_samples = xa.shape[0]
@@ -237,5 +238,8 @@ class FilterParingLayer(Block):
             n_groups = self._maxout_grouping
             y = y.reshape([n_samples, n_groups, n_channels/n_groups, h, w])
             y = y.max(axis=1).reshape([n_samples, n_channels/n_groups*h, w, w])
+
+        if self._flatten_output:
+            y = y.flatten(2)
 
         return y
