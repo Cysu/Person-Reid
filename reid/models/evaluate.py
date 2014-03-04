@@ -6,6 +6,16 @@ import theano
 import theano.tensor as T
 
 
+def recursive_cost(output, target, cost_func):
+    if type(cost_func) is list:
+        cost = sum([recursive_cost(o, t, f)
+                    for o, t, f in zip(output, target, cost_func)])
+    else:
+        cost = cost_func(output=output, target=target)
+
+    return cost
+
+
 class Evaluator(object):
     """Evaluate neural network by computing cost and error"""
 
@@ -21,15 +31,10 @@ class Evaluator(object):
                 requirement. ``None`` when no processing is needed.
             regularize: Coefficient of regularization terms in cost
             norm: The norm of parameters to be used for regularization
-
-        When ``cost_func`` and ``error_func`` both are functions, the model
-        and ``adapter`` should output only one theano tensor. When ``cost_func``
-        and ``error_func`` both are list of functions, the model and ``adapter``
-        should output a list of theano tensors respectively.
         """
 
         super(Evaluator, self).__init__()
-        
+
         self._model = model
         self._cost_func = cost_func
         self._error_func = error_func
@@ -50,31 +55,21 @@ class Evaluator(object):
             Tuple (cost, inc_updates, param_updates)
         """
 
-        # Compute the output
-        y = self._model.get_output(x)
+        output = self._collect_output(x)
+        target = self._collect_target(target)
 
-        # Process the target
-        if self._adapter is not None:
-            target = self._adapter.get_output(target)
-
-        # Compute the cost value
-        if type(self._cost_func) is list:
-            cost = sum([self._cost_func[i](output=o, target=t)
-                        for i, (o, t) in enumerate(zip(y, target))])
-        else:
-            cost = self._cost_func(output=y, target=target)
+        cost = recursive_cost(output, target, self._cost_func)
 
         if self._regularize > 0:
-            cost += self._regularize * self._model.get_regularization(2)
+            cost += self._regularize * \
+                    self._model.get_regularization(self._norm)
 
         # Compute the gradients
         grads = T.grad(cost, self._model.parameters)
 
         # Compute the updates
         create_empty = lambda p: theano.shared(
-            numpy.zeros(p.get_value(borrow=True).shape, dtype=p.dtype),
-            borrow=True
-        )
+            numpy.zeros_like(p.get_value(borrow=True)), borrow=True)
 
         incs = [create_empty(p) for p in self._model.parameters]
 
@@ -98,18 +93,21 @@ class Evaluator(object):
             The scalar error value
         """
 
-        # Compute the output
-        y = self._model.get_output(x)
+        output = self._collect_output(x)
+        target = self._collect_target(target)
 
-        # Process the target
-        if self._adapter is not None:
-            target = self._adapter.get_output(target)
-
-        # Compute the error
-        if type(self._error_func) is list:
-            error = sum([self._error_func[i](output=o, target=t)
-                         for i, (o, t) in enumerate(zip(y, target))])
-        else:
-            error = self._error_func(output=y, target=target)
+        error = recursive_cost(output, target, self._error_func)
 
         return error
+
+    def _collect_output(self, x):
+        y, thr = self._model.get_output(x)
+        thr.append(y)
+        return thr
+
+    def _collect_target(self, target):
+        if self._adapter is None: return [target]
+
+        target, thr = self._adapter.get_output(target)
+        thr.append(target)
+        return thr

@@ -12,7 +12,7 @@ def aug_translation(images, targets, offset_x=1, offset_y=1, padding=0):
         offset_x: An integer representing the translation offset in x axis
         offset_y: An integer representing the translation offset in y axis
         padding: Either a float represting the padding value, or one of the
-            strings 'circular', 'replicate' and 'symmetirc'. Only padding with 
+            strings 'circular', 'replicate' and 'symmetirc'. Only padding with
             value 0 supported in current version.
     """
 

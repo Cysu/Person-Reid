@@ -13,10 +13,12 @@ class FullConnLayer(Block):
     """Fully connected layer"""
 
     def __init__(self, input_size, output_size, active_func=None,
-                 W=None, b=None):
+                 W=None, b=None,
+                 through=False):
         super(FullConnLayer, self).__init__()
 
         self._active_func = active_func
+        self._through = through
 
         if W is None:
             W_bound = numpy.sqrt(6.0 / (input_size + output_size))
@@ -42,7 +44,8 @@ class FullConnLayer(Block):
 
     def get_output(self, x):
         z = T.dot(x, self._W) + self._b
-        return z if self._active_func is None else self._active_func(z)
+        z = z if self._active_func is None else self._active_func(z)
+        return (z, []) if not self._through else (z, [z])
 
     def get_regularization(self, l):
         return self._W.norm(l)
@@ -52,19 +55,20 @@ class ConvPoolLayer(Block):
     """Convolutional and max-pooling layer"""
 
     def __init__(self, filter_shape, pool_shape,
-                 image_shape=None, active_func=None, flatten_output=False):
+                 image_shape=None, active_func=None,
+                 flatten=False, through=False):
         """Initialize the convolutional and max-pooling layer
 
         Args:
             filter_shape: 4D-tensor, (n_filters, n_channels, n_rows, n_cols)
             pool_shape: 2D-tensor, (n_rows, n_cols)
-            image_shape: None if the input is always 4D-tensor, (n_images, 
+            image_shape: None if the input is always 4D-tensor, (n_images,
                 n_channels, n_rows, n_cols). If the input images are represented
-                as vectors, then a 3D-tensor, (n_channels, n_rows, n_cols) is 
+                as vectors, then a 3D-tensor, (n_channels, n_rows, n_cols) is
                 required.
             active_func: Active function of this layer
-            flatten_output: True if the output image should be flattened as a 
-                vector.
+            flatten: True if the output image should be flattened as a vector
+            through: True if the output should be passed through
         """
 
         super(ConvPoolLayer, self).__init__()
@@ -73,7 +77,8 @@ class ConvPoolLayer(Block):
         self._pool_shape = pool_shape
         self._image_shape = image_shape
         self._active_func = active_func
-        self._flatten_output = flatten_output
+        self._flatten = flatten
+        self._through = through
 
         fan_in = numpy.prod(filter_shape[1:])
         fan_out = filter_shape[0] * numpy.prod(filter_shape[2:]) / numpy.prod(pool_shape)
@@ -113,13 +118,48 @@ class ConvPoolLayer(Block):
         if self._active_func is not None:
             y = self._active_func(y)
 
-        if self._flatten_output:
+        if self._flatten:
             y = y.flatten(2)
 
-        return y
+        return (y, []) if not self._through else (y, [y])
 
     def get_regulariation(self, l):
         return self._W.norm(l)
+
+
+class FilterParingLayer(Block):
+    """Filter paring layer
+
+    """
+
+    def __init__(self, image_shape, maxout_grouping=None,
+                 flatten=False, through=False):
+        self._image_shape = image_shape
+        self._maxout_grouping = maxout_grouping
+        self._flatten = flatten
+        self._through = through
+
+    def get_output(self, xa, xb):
+        n_samples = xa.shape[0]
+        n_channels, h, w = self._image_shape
+
+        xa = xa.reshape(n_samples*n_channels*h, w)
+        xb = xb.reshape(n_samples*n_channels*h, w)
+
+        y = [xa[:, i].dimshuffle(0, 'x') * xb for i in xrange(w)]
+        y = T.concatenate(y, axis=1)
+
+        if self._maxout_grouping is None:
+            y = y.reshape([n_samples, n_channels, h, w, w]).max(axis=1)
+        else:
+            n_groups = self._maxout_grouping
+            y = y.reshape([n_samples, n_groups, n_channels/n_groups, h, w])
+            y = y.max(axis=1).reshape([n_samples, n_channels/n_groups*h, w, w])
+
+        if self._flatten:
+            y = y.flatten(2)
+
+        return (y, []) if not self._through else (y, [y])
 
 
 class CompLayer(Block):
@@ -130,7 +170,7 @@ class CompLayer(Block):
     dimension are data samples.
     """
 
-    def __init__(self, strategy=None):
+    def __init__(self, strategy=None, through=False):
         """Initialize the composition layer
 
         Args:
@@ -142,6 +182,7 @@ class CompLayer(Block):
         super(CompLayer, self).__init__()
 
         self._strategy = strategy
+        self._through = through
 
     def get_output(self, x):
         """Get the concatenated matrix
@@ -155,12 +196,13 @@ class CompLayer(Block):
 
         z = [t.flatten(2) for t in x]
 
-        if self._strategy is None:
-            return T.concatenate(z, axis=1)
-        elif self._strategy == 'Maxout':
+        if self._strategy == 'Maxout':
             m, n, g = z[0].shape[0], z[0].shape[1], len(z)
-            return T.concatenate(z, axis=0).reshape((g, m, n)).max(axis=0)
-     
+            y = T.concatenate(z, axis=0).reshape((g, m, n)).max(axis=0)
+        else:
+            y = T.concatenate(z, axis=1)
+
+        return (y, []) if not self._through else (y, [y])
 
 class DecompLayer(Block):
     """Decomposition layer
@@ -170,7 +212,7 @@ class DecompLayer(Block):
     samples.
     """
 
-    def __init__(self, data_shapes, active_funcs=None):
+    def __init__(self, data_shapes, active_funcs=None, through=False):
         """Initialize the decomposition layer
 
         Args:
@@ -178,17 +220,18 @@ class DecompLayer(Block):
                 sample
             active_funcs: A list of active functions for each separated theano
                 tensor
+            through: True if the output should be passed through
         """
 
         super(DecompLayer, self).__init__()
 
         self._data_shapes = data_shapes
         self._active_funcs = active_funcs
+        self._through = through
 
         self._segments = [0]
         for i, shape in enumerate(data_shapes):
             self._segments.append(self._segments[i] + numpy.prod(shape))
-
 
     def get_output(self, x):
         """Get the separated list of theano tensors with specified activation
@@ -209,37 +252,38 @@ class DecompLayer(Block):
             if self._active_funcs is not None and self._active_funcs[i] is not None:
                 ret[i] = self._active_funcs[i](ret[i])
 
-        return ret
+        return (ret, []) if not self._through else (ret, [ret])
 
 
-class FilterParingLayer(Block):
-    """Filter paring layer
+class CloneLayer(Block):
+    """Clone layer
 
+    Clone layer clones the input tensor or list. All cloned instances share
+    same reference. Typically, the layer is followed by a MultiwayNeuralNet.
     """
 
-    def __init__(self, image_shape, maxout_grouping=None, flatten_output=False):
-        self._image_shape = image_shape
-        self._maxout_grouping = maxout_grouping
-        self._flatten_output = flatten_output
+    def __init__(self, n_copies, through=False):
+        """Initialize the clone layer
 
-    def get_output(self, xa, xb):
-        n_samples = xa.shape[0]
-        n_channels, h, w = self._image_shape
+        Args:
+            n_copies: The number of copies to be cloned
+            through: True if the output should be passed through
+        """
 
-        xa = xa.reshape(n_samples*n_channels*h, w)
-        xb = xb.reshape(n_samples*n_channels*h, w)
+        self._n_copies = n_copies
+        self._through = through
 
-        y = [xa[:, i].dimshuffle(0, 'x') * xb for i in xrange(w)]
-        y = T.concatenate(y, axis=1)
 
-        if self._maxout_grouping is None:
-            y = y.reshape([n_samples, n_channels, h, w, w]).max(axis=1)
-        else:
-            n_groups = self._maxout_grouping
-            y = y.reshape([n_samples, n_groups, n_channels/n_groups, h, w])
-            y = y.max(axis=1).reshape([n_samples, n_channels/n_groups*h, w, w])
+    def get_output(self, x):
+        """Get the cloned list of tensors or lists
 
-        if self._flatten_output:
-            y = y.flatten(2)
+        Args:
+            x: A theano tensor or python list
 
-        return y
+        Returns:
+            A list of [x] * n_copies
+        """
+
+        ret = [x] * self._n_copies
+
+        return (ret, []) if not self._through else (ret, [ret])

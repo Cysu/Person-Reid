@@ -8,7 +8,7 @@ def ndarray2qimage(array):
     """Convert from numpy.ndarray to QImage
 
     Args:
-        array: An numpy.ndarray of size h*w*c. The number of channels could be 
+        array: An numpy.ndarray of size h*w*c. The number of channels could be
                either one or three, one stands for grayscale image, three stands
                for RGB image. The dtype must be numpy.uint32.
 

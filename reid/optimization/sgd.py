@@ -79,7 +79,7 @@ def train(evaluator, datasets, learning_rate=1e-4, momentum=0.9,
     patience = 20 * n_train_batches
 
     done_looping = False
-    
+
     print "Start training ..."
 
     begin_time = time.clock()

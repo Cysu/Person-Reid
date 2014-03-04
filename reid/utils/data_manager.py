@@ -32,7 +32,7 @@ def view_repr(group_data):
 class DataLoader(object):
     """Data loader (DataLoader)
 
-    The DataLoader class provides input and output functions for data. The data 
+    The DataLoader class provides input and output functions for data. The data
     file should follow the unified format that described in README.md.
     """
 
@@ -80,7 +80,7 @@ class DataLoader(object):
         """
 
         views = self._data[gid, 0]['pedes'][pid, :]
-        
+
         return [v.shape[1] for v in views]
 
     def get_pedes(self, gid):

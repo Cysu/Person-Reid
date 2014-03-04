@@ -57,7 +57,7 @@ def _prepare_data(load_from_cache=False, save_to_cache=False):
         for gid in xrange(image_data.get_n_groups()):
             bias = sum(n_pedes[0:gid])
             group_data = data_manager.view_repr(image_data.get_pedes(gid))
-            
+
             for vid in xrange(v):
                 view_data = group_data[vid]
                 view_data = [(pid+bias, image) for pid, image in view_data]
@@ -90,7 +90,7 @@ def _prepare_data(load_from_cache=False, save_to_cache=False):
 
     if save_to_cache:
         with open(_cached_datasets, 'wb') as f:
-            cPickle.dump((views_data, datasets), f, 
+            cPickle.dump((views_data, datasets), f,
                 protocol=cPickle.HIGHEST_PROTOCOL)
 
     return (views_data, datasets)

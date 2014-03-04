@@ -24,7 +24,7 @@ class DataTreeModel(QtCore.QAbstractItemModel):
             P = data_loader.get_pedes(gid)
 
             # Group node
-            gdata = ["Group {0}".format(gid), 
+            gdata = ["Group {0}".format(gid),
                      "{0}×{1}".format(P.shape[0], P.shape[1])]
             gnode = DataTreeNode(gdata, self._root)
 
@@ -34,7 +34,7 @@ class DataTreeModel(QtCore.QAbstractItemModel):
             for pid in xrange(P.shape[0]):
                 n_images = data_loader.get_n_images(gid, pid)
 
-                pdata = ["Pedestrian {0}".format(pid), 
+                pdata = ["Pedestrian {0}".format(pid),
                          ' + '.join(map(str, n_images))]
                 pnode = DataTreeNode(pdata, gnode)
 
@@ -60,7 +60,7 @@ class DataTreeModel(QtCore.QAbstractItemModel):
         return self.createIndex(p.get_parent().get_child_index(p), 0, p)
 
     def headerData(self, section, orientation, role):
-        if orientation != Qt.Horizontal or role != Qt.DisplayRole: 
+        if orientation != Qt.Horizontal or role != Qt.DisplayRole:
             return None
 
         return self._root.get_data(section)
@@ -89,4 +89,4 @@ class DataTreeModel(QtCore.QAbstractItemModel):
     def columnCount(self, parent=QModelIndex()):
         p = parent.internalPointer() if parent.isValid() else self._root
 
-        return p.n_columns()      
+        return p.n_columns()

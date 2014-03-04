@@ -5,7 +5,7 @@ class DataTreeNode(object):
     """Node of data in tree model (DataTreeNode)
 
     The instance of DataTreeNode class is the node in tree model. A node has a
-    parent and some children nodes. The node iteself contains several columns 
+    parent and some children nodes. The node iteself contains several columns
     of data.
     """
 

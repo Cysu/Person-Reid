@@ -17,7 +17,7 @@ def load_data(datasets):
 
     Args:
         datasets: A list of datasets names
-    
+
     Returns:
         A list of tuples. Each is for one pedestrian in the form of
         ``(image, body_parts_map, attribute)``.
@@ -511,7 +511,7 @@ def show_result(result):
             sets_menu.addAction(self.tr("Testing Set"),
                                 self, QtCore.SLOT("show_test_set()"),
                                 QtGui.QKeySequence(self.tr("Ctrl+3")))
- 
+
             pedes_menu = menu_bar.addMenu("&Pedestrians")
             pedes_menu.addAction(self.tr("Next"),
                                  self, QtCore.SLOT("show_next_pedes()"),

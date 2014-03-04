@@ -75,8 +75,8 @@ class FlowLayout(QtGui.QLayout):
                 QtCore.Qt.Horizontal)
 
             spaceY = self.spacing() + wid.style().layoutSpacing(
-                QtGui.QSizePolicy.PushButton, 
-                QtGui.QSizePolicy.PushButton, 
+                QtGui.QSizePolicy.PushButton,
+                QtGui.QSizePolicy.PushButton,
                 QtCore.Qt.Vertical)
 
             nextX = x + item.sizeHint().width() + spaceX

@@ -18,7 +18,7 @@ def load_data(datasets):
 
     Args:
         datasets: A list of datasets names
-    
+
     Returns:
         ``(gallery, probe)`` where each is a list of pedestrians
         ``[image, body_parts_map, pid]``

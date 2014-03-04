@@ -15,7 +15,7 @@ from reid.utils.gui_images_gallery import ImagesGallery
 class PedesGallery(QtGui.QWidget):
     """Pedestrian Images Gallery (PedesGallery)
 
-    The PedesGallery class is a widget that display images of a pedestrian from 
+    The PedesGallery class is a widget that display images of a pedestrian from
     different views.
     """
 
@@ -25,16 +25,16 @@ class PedesGallery(QtGui.QWidget):
         self._create_ui()
 
     def show_pedes(self, pedes):
-        """Show images of a same pedestrian from different views 
+        """Show images of a same pedestrian from different views
 
         Args:
-            pedes: An array of different views of the pedestrian. Each element 
+            pedes: An array of different views of the pedestrian. Each element
             is itself an array of images in that view.
         """
 
         nviews = pedes.shape[0]
         cur_nwidgets = len(self.subwidgets)
-        
+
         layout = self.layout()
 
         # Expand or shrink the sub widgets list
@@ -152,7 +152,7 @@ class MainWindow(QtGui.QMainWindow):
         else:
             self._cur_pid -= 1
             self._gallery_panel.show_pedes(self._cur_pedes[self._cur_pid, :])
-            
+
             prev_index = self._cur_index.sibling(self._cur_pid, 0)
             self._tree_dock.setCurrentIndex(prev_index)
             self._cur_index = prev_index

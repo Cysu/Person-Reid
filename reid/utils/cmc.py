@@ -14,20 +14,20 @@ def count(distmat, glabels=None, plabels=None, n_selected_labels=None):
     """Compute the Cumulative Match Characteristic(CMC)
 
     Args:
-        distmat: A ``m×n`` distance matrix. ``m`` and ``n`` are the number of 
+        distmat: A ``m×n`` distance matrix. ``m`` and ``n`` are the number of
             gallery and probe samples, respectively. In the case of ``glabels``
             and ``plabels`` both are ``None``, the distance matrix should be
             square and we assume both gallery and probe samples are unique,
-            i.e., the i-th gallery samples matches only to the i-th probe 
+            i.e., the i-th gallery samples matches only to the i-th probe
             sample.
 
-        glabels: Vector of length ``m`` that represents the labels of gallery 
+        glabels: Vector of length ``m`` that represents the labels of gallery
             samples
 
-        plabels: Vector of length ``n`` that represents the labels of probe 
+        plabels: Vector of length ``n`` that represents the labels of probe
             samples
 
-        n_selected_labels: If specified, we will select only part of all the 
+        n_selected_labels: If specified, we will select only part of all the
             labels to compute the CMC.
 
     Returns:

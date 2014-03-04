@@ -59,7 +59,7 @@ def _prepare_data(load_from_cache=False, save_to_cache=False):
 
         # Prepare the datasets
         print "Prepare the datasets ..."
-        
+
         datasets = Datasets(inputs, targets)
         datasets.split(train_ratio=0.5, valid_ratio=0.3)
 
@@ -95,7 +95,7 @@ def _choose_threshold(model, datasets, verbose=False):
         fpr, tpr = count_roc(t)
         roc.append([t, fpr, tpr])
         if threshold == -1 and tpr >= 0.9: threshold = t
-    
+
     if verbose:
         from matplotlib import pyplot
 
@@ -151,7 +151,7 @@ def _generate_output(model, threshold, datasets, image_shape):
     output_func = theano.function(inputs=[x], outputs=y)
 
     data = DataSaver()
-    
+
     def add(X, Y):
         m = X.shape[0]
         gid = data.add_group(m, 1)
@@ -165,7 +165,7 @@ def _generate_output(model, threshold, datasets, image_shape):
 
     add(datasets.train_x.get_value(borrow=True),
         datasets.train_y.get_value(borrow=True))
-        
+
     add(datasets.valid_x.get_value(borrow=True),
         datasets.valid_y.get_value(borrow=True))
 

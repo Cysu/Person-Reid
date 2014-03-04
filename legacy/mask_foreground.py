@@ -45,7 +45,7 @@ def _mask_dataset():
     print "Saving data ..."
 
     mask_data = DataSaver()
-    
+
     cur_index = 0
     for gid in xrange(image_data.get_n_groups()):
         m, v = image_data.get_n_pedes_views(gid)
@@ -68,5 +68,5 @@ def _mask_dataset():
 
     mask_data.save('../data/cuhk_small_masked.mat')
 
-if __name__ == '__main__':    
+if __name__ == '__main__':
     _mask_dataset()
