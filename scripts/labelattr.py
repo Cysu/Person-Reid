@@ -293,23 +293,29 @@ class LabellingWindow(QtGui.QMainWindow):
         self._status.setText('{0} / {1}'.format(pid+1, self.mat_images.shape[0]))
 
     def check_pid(self, pid, alert=True):
-        attr = self.mat_attributes[pid, 0]
+        errmsg = ''
 
-        badfields = []
+        for v in xrange(self.mat_attributes.shape[1]):
+            for k in xrange(self.mat_attributes[pid, v].shape[1]):
+                attr = self.mat_attributes[pid, v][0, k]
 
-        for i, grp in enumerate(attrconf.unival):
-            subattr = attr[[attrconf.names.index(s) for s in grp]]
-            if subattr.sum() != 1: badfields.append(attrconf.unival_titles[i])
+                badfields = []
 
-        for i, grp in enumerate(attrconf.multival):
-            subattr = attr[[attrconf.names.index(s) for s in grp]]
-            if subattr.sum() == 0: badfields.append(attrconf.multival_titles[i])
+                for i, grp in enumerate(attrconf.unival):
+                    subattr = attr[[attrconf.names.index(s) for s in grp]]
+                    if subattr.sum() != 1: badfields.append(attrconf.unival_titles[i])
 
-        if badfields and alert:
-            self.show_message(self.tr("Error in fields: {0}".format(
-                ", ".join(badfields))))
+                for i, grp in enumerate(attrconf.multival):
+                    subattr = attr[[attrconf.names.index(s) for s in grp]]
+                    if subattr.sum() == 0: badfields.append(attrconf.multival_titles[i])
 
-        return not badfields
+                if badfields:
+                    errmsg += "{0},{1}: {2}\n".format(v, k, ", ".join(badfields))
+
+        if errmsg and alert:
+            self.show_message(self.tr("Errors on:\n" + errmsg))
+
+        return not errmsg
 
     def _create_menus(self):
         menu_bar = self.menuBar()
