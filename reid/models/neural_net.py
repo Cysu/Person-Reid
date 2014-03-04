@@ -28,10 +28,11 @@ class NeuralNet(Block):
         self._const_params = \
             [False] * len(blocks) if const_params is None else const_params
 
-        self._params = []
+        self._params = set()
         for block, is_const in zip(self._blocks, self._const_params):
             if not is_const:
-                self._params.extend(block.parameters)
+                self._params |= set(block.parameters)
+        self._params = list(self._params)
 
     def get_output(self, x):
         """Get the final result of passing input data to each sub network
@@ -48,7 +49,7 @@ class NeuralNet(Block):
             x = y
             thr.extend(t)
 
-        if self._through: thr.extend(y)
+        if self._through: thr.append(y)
 
         return (y, thr)
 
@@ -136,5 +137,7 @@ class MultiwayNeuralNet(NeuralNet):
             y, t = block.get_output(data)
             out.append(y)
             thr.extend(t)
+
+        if self._through: thr.append(out)
 
         return (out, thr)

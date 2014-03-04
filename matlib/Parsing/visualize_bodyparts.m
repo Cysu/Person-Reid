@@ -1,7 +1,7 @@
 function visualize_bodyparts(dname)
 
-load('colormap.mat');
-load(fullfile('..', '..', 'data', 'attributes', [dname '_parse.mat']));
+load(fullfile('model', 'refined_colormap.mat'));
+load(fullfile('..', '..', 'data', 'attrreid', [dname '_parse.mat']));
 
 m = 3;
 n = 6;
@@ -20,11 +20,16 @@ for i = 1:m*n
     img = images{j, k};
     bdparts = bodyparts{j, k};
     
+    nimgs = length(img);
+    b = randi(nimgs);
+    img = img{b};
+    bdparts = bdparts{b};
+    
     imshow(img);
     hold on;
     h = imshow(bdparts, colormap);
     hold off;
-    set(h, 'AlphaData', (bdparts > 0) * 1);
+    set(h, 'AlphaData', (bdparts > 0) * 0.3);
 end
 
 end

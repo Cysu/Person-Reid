@@ -132,19 +132,22 @@ class FilterParingLayer(Block):
 
     """
 
-    def __init__(self, image_shape, maxout_grouping=None,
+    def __init__(self, image_shape, maxout_grouping=None, pool_shape=None,
                  flatten=False, through=False):
+        super(FilterParingLayer, self).__init__()
+
         self._image_shape = image_shape
         self._maxout_grouping = maxout_grouping
+        self._pool_shape = pool_shape
         self._flatten = flatten
         self._through = through
 
-    def get_output(self, xa, xb):
-        n_samples = xa.shape[0]
+    def get_output(self, x):
+        n_samples, d = x.shape[0], x.shape[1] / 2
         n_channels, h, w = self._image_shape
 
-        xa = xa.reshape(n_samples*n_channels*h, w)
-        xb = xb.reshape(n_samples*n_channels*h, w)
+        xa = x[:, :d].reshape([n_samples*n_channels*h, w])
+        xb = x[:, d:].reshape([n_samples*n_channels*h, w])
 
         y = [xa[:, i].dimshuffle(0, 'x') * xb for i in xrange(w)]
         y = T.concatenate(y, axis=1)
@@ -153,13 +156,32 @@ class FilterParingLayer(Block):
             y = y.reshape([n_samples, n_channels, h, w, w]).max(axis=1)
         else:
             n_groups = self._maxout_grouping
-            y = y.reshape([n_samples, n_groups, n_channels/n_groups, h, w])
+            y = y.reshape([n_samples, n_groups, n_channels/n_groups, h, w, w])
             y = y.max(axis=1).reshape([n_samples, n_channels/n_groups*h, w, w])
+
+        y = T.signal.downsample.max_pool_2d(
+            input=y,
+            ds=self._pool_shape,
+            ignore_border=True)
 
         if self._flatten:
             y = y.flatten(2)
 
         return (y, []) if not self._through else (y, [y])
+
+
+class IdentityLayer(Block):
+    """Indentity function layer
+
+    """
+
+    def __init__(self, through=False):
+        super(IdentityLayer, self).__init__()
+
+        self._through = through
+
+    def get_output(self, x):
+        return (x, []) if not self._through else (x, [x])
 
 
 class CompLayer(Block):
@@ -194,7 +216,14 @@ class CompLayer(Block):
             The concatenated matrix
         """
 
-        z = [t.flatten(2) for t in x]
+        y = self._recursive_comp(x)
+
+        return (y, []) if not self._through else (y, [y])
+
+    def _recursive_comp(self, x):
+        if type(x) is not list: return x.flatten(2)
+
+        z = [self._recursive_comp(t) for t in x]
 
         if self._strategy == 'Maxout':
             m, n, g = z[0].shape[0], z[0].shape[1], len(z)
@@ -202,7 +231,8 @@ class CompLayer(Block):
         else:
             y = T.concatenate(z, axis=1)
 
-        return (y, []) if not self._through else (y, [y])
+        return y
+
 
 class DecompLayer(Block):
     """Decomposition layer
@@ -269,6 +299,8 @@ class CloneLayer(Block):
             n_copies: The number of copies to be cloned
             through: True if the output should be passed through
         """
+
+        super(CloneLayer, self).__init__()
 
         self._n_copies = n_copies
         self._through = through

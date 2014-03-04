@@ -83,10 +83,12 @@ def imresize(image, shape, keep_ratio=False):
 
     return ret
 
-def subtract_luminance(rgbimg):
+def subtract_luminance(rgbimg, mean_luminance=None):
     labimg = rgb2lab(rgbimg)
 
-    mean_luminance = numpy.mean(labimg[:,:,0])
+    if mean_luminance is None:
+        mean_luminance = numpy.mean(labimg[:,:,0])
+
     labimg[:,:,0] -= mean_luminance
 
     return labimg

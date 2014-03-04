@@ -1,7 +1,8 @@
 #!/usr/bin/python2
 # -*- coding: utf-8 -*-
 
-datasets = ['CUHK', 'CUHKL', 'CUHKD', 'GRID', 'PRID', 'VIPeR', '3DPeS', 'SARC3D']
+# datasets = ['CUHK', 'CUHKL', 'CUHKD', 'GRID', 'PRID', 'VIPeR', '3DPeS', 'SARC3D']
+datasets = ['3DPeS', 'SARC3D']
 
 names = [
     'genderFemale',

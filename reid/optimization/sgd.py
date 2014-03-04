@@ -37,22 +37,22 @@ def train(evaluator, datasets, learning_rate=1e-4, momentum=0.9,
     n_test_batches = datasets.test_x.get_value(borrow=True).shape[0] / batch_size + 1
 
     # Setup training, validation and testing functions
-    x = T.matrix('x') # input data
-    y = T.matrix('y') # corresponding targets
+    X = T.matrix('X') # input data
+    Y = T.matrix('Y') # corresponding targets
     i = T.lscalar('i') # batch index
     alpha = T.scalar('alpha') # learning rate
     dummy = T.scalar('dummy') # for param update
 
     # Compute the cost, updates and error
-    cost, inc_updates, param_updates = evaluator.get_cost_updates(x, y, alpha, momentum)
-    error = evaluator.get_error(x, y)
+    cost, inc_updates, param_updates = evaluator.get_cost_updates(X, Y, alpha, momentum)
+    error = evaluator.get_error(X, Y)
 
     # Build training, validation and testing functions
     inc_update_func = theano.function(
         inputs=[i, alpha], outputs=cost, updates=inc_updates,
         givens={
-            x: datasets.train_x[i*batch_size : (i+1)*batch_size],
-            y: datasets.train_y[i*batch_size : (i+1)*batch_size]
+            X: datasets.train_x[i*batch_size : (i+1)*batch_size],
+            Y: datasets.train_y[i*batch_size : (i+1)*batch_size]
         })
     param_update_func = theano.function(
         inputs=[dummy], outputs=dummy, updates=param_updates)
@@ -60,15 +60,15 @@ def train(evaluator, datasets, learning_rate=1e-4, momentum=0.9,
     valid_func = theano.function(
         inputs=[i], outputs=error,
         givens={
-            x: datasets.valid_x[i*batch_size : (i+1)*batch_size],
-            y: datasets.valid_y[i*batch_size : (i+1)*batch_size]
+            X: datasets.valid_x[i*batch_size : (i+1)*batch_size],
+            Y: datasets.valid_y[i*batch_size : (i+1)*batch_size]
         })
 
     test_func = theano.function(
         inputs=[i], outputs=error,
         givens={
-            x: datasets.test_x[i*batch_size : (i+1)*batch_size],
-            y: datasets.test_y[i*batch_size : (i+1)*batch_size]
+            X: datasets.test_x[i*batch_size : (i+1)*batch_size],
+            Y: datasets.test_y[i*batch_size : (i+1)*batch_size]
         })
 
     # Start training

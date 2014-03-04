@@ -3,7 +3,6 @@
 
 import theano.tensor as T
 
-
 def mean_binary_cross_entropy(output, target):
     return T.nnet.binary_crossentropy(output, target).sum(axis=1).mean()
 

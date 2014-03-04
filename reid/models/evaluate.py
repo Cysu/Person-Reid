@@ -6,9 +6,9 @@ import theano
 import theano.tensor as T
 
 
-def recursive_cost(output, target, cost_func):
+def _recursive_cost(output, target, cost_func):
     if type(cost_func) is list:
-        cost = sum([recursive_cost(o, t, f)
+        cost = sum([_recursive_cost(o, t, f)
                     for o, t, f in zip(output, target, cost_func)])
     else:
         cost = cost_func(output=output, target=target)
@@ -58,7 +58,7 @@ class Evaluator(object):
         output = self._collect_output(x)
         target = self._collect_target(target)
 
-        cost = recursive_cost(output, target, self._cost_func)
+        cost = _recursive_cost(output, target, self._cost_func)
 
         if self._regularize > 0:
             cost += self._regularize * \
@@ -96,7 +96,7 @@ class Evaluator(object):
         output = self._collect_output(x)
         target = self._collect_target(target)
 
-        error = recursive_cost(output, target, self._error_func)
+        error = _recursive_cost(output, target, self._error_func)
 
         return error
 
@@ -108,6 +108,5 @@ class Evaluator(object):
     def _collect_target(self, target):
         if self._adapter is None: return [target]
 
-        target, thr = self._adapter.get_output(target)
-        thr.append(target)
-        return thr
+        target, __ = self._adapter.get_output(target)
+        return target
