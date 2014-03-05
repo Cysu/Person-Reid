@@ -535,10 +535,6 @@ def show_cmc(model, X, indices):
 
     f = theano.function(inputs=[x], outputs=y)
 
-    def compute_distance(i, j):
-        y = f(numpy.hstack((X[i:i+1, :], X[j:j+1, :]))).ravel()
-        return -y[-1]
-
     gX, gY, pX, pY = [], [], [], []
     for i, (pid, vid) in enumerate(indices):
         if vid == 0:
@@ -548,17 +544,11 @@ def show_cmc(model, X, indices):
             pX.append(i)
             pY.append(pid)
 
-    gX = numpy.asarray(gX)
-    gY = numpy.asarray(gY)
-    pX = numpy.asarray(pX)
-    pY = numpy.asarray(pY)
+    def compute_distance(i, j):
+        y = f(numpy.hstack((X[gX[i]:gX[i]+1, :], X[pX[j]:pX[j]+1, :]))).ravel()
+        return -y[-1]
 
-    D = numpy.zeros((gX.shape[0], pX.shape[0]))
-    for i in xrange(gX.shape[0]):
-        for j in xrange(pX.shape[0]):
-            D[i, j] = compute_distance(gX[i], pX[j])
-
-    result = cmc.count(D, gY, pY, 100)
+    result = cmc.count(compute_distance, gY, pY, 100)
 
     return result
 
