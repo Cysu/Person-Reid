@@ -143,7 +143,7 @@ class FilterParingLayer(Block):
         self._through = through
 
     def get_output(self, x):
-        n_samples, d = x.shape[0], x.shape[1] / 2
+        n_samples, d = x.shape[0], x.shape[1] // 2
         n_channels, h, w = self._image_shape
 
         xa = x[:, :d].reshape([n_samples*n_channels*h, w])
