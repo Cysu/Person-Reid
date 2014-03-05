@@ -141,7 +141,6 @@ def preprocess(decdata):
 
     for i, (img, parts, attrs) in enumerate(decdata):
         mean_luminance = rgb2lab(img)[:,:,0].mean()
-        print mean_luminance
         X[i] = [imgprep(part, mean_luminance) for part in parts]
         X[i] = numpy.asarray(X[i], dtype=numpy.float32).ravel()
         A[i] = numpy.concatenate(attrs).astype(numpy.float32)
@@ -318,7 +317,7 @@ def train_model(dataset):
 
     # Evaluator
     def reid_cost(output, target):
-        k = (len(attrconf.unival) + len(attrconf.multival)) * 2.0
+        k = (len(attrconf.unival) + len(attrconf.multival))
         return k * cf.mean_binary_cross_entropy(output, target)
 
     cost_func = [
