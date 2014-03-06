@@ -6,14 +6,17 @@ addpath(genpath(fullfile('..', 'classifier')));
 
 m = 0;
 for t = 1:length(datasets)
-    load(fullfile('..', '..', 'data', 'attributes', [datasets{t} '.mat']));
+    load(fullfile('..', '..', 'data', 'attrreid', [datasets{t} '.mat']));
     for i = 1:size(images, 1)
-        if ~check_attribute(attributes{i}); continue; end;
         for j = 1:size(images, 2)
             if isempty(images{i, j}); break; end;
-            m = m + 1;
-            imgs{m} = images{i, j};
-            attrs{m} = attributes{i};
+            view_images = images{i, j};
+            view_attrs = attributes{i, j};
+            for k = 1:length(view_images)
+                m = m + 1;
+                imgs{m} = view_images{k};
+                attrs{m} = view_attrs{k};
+            end
         end
     end
 end
@@ -64,14 +67,9 @@ for i = 1:m
 end
 close(hwait);
 
-% Shuffle and sub-sampling
+%% Shuffle and sub-sampling
 inds = randperm(m);
-X = X(:, inds(1:ceil(m/4)));
-Y = Y(:, inds(1:ceil(m/4)));
-
-m = ceil(m/4);
-
-n_train = ceil(m * 0.7);
+n_train = ceil(m * 0.8);
 train_X = X(:, 1:n_train);
 train_Y = Y(:, 1:n_train);
 test_X = X(:, n_train+1:m);
@@ -88,9 +86,8 @@ models = cell(n_attr, 1);
 for i = 1:n_attr
     fprintf('Training %d attribute: %s\n', i, names{i});
     models{i} = svmtrain(train_Y(i, :)', train_X', '-t 5 -b 1 -q');
+    save('rlayne_model.mat', 'models', '-v7.3');
 end
-
-save('rlayne_model.mat', 'models', '-v7.3');
 
 %% Test the SVM models
 if exist('rlayne_model.mat', 'file') && ~exist('models', 'var')

@@ -223,8 +223,7 @@ def sample(indices, pos_downsample=1.0, neg_pos_ratio=1.0):
     return (train, valid, test, train_pids, valid_pids, test_pids)
 
 
-@cachem.save('dataset')
-def create_dataset(X, A, samples):
+def create_dataset(X, A, samples, batch_dir):
     """Create dataset for model training, validation and testing
 
     Args:
@@ -238,11 +237,9 @@ def create_dataset(X, A, samples):
 
     print "Creating dataset ..."
 
-    dataset = cachem.load('dataset')
+    if os.path.isdir(batch_dir): return
 
-    if dataset is not None: return dataset
-
-    from reid.utils.dataset import Dataset
+    import cPickle
 
     def genset(s):
         I = numpy.asarray([i for i, __, __ in s])
@@ -254,13 +251,24 @@ def create_dataset(X, A, samples):
 
         return (x, y)
 
-    return Dataset(train_set=genset(samples[0]),
-                   valid_set=genset(samples[1]),
-                   test_set=genset(samples[2]))
+    batch_size = 300
+
+    def split_batch(title, x, y):
+        m = x.shape[0]
+        n_batches = m // batch_size
+        for i in xrange(n_batches):
+            batch_x = x[i*batch_size : (i+1)*batch_size]
+            batch_y = y[i*batch_size : (i+1)*batch_size]
+            with open(os.path.join(batch_dir, '{0}_{1:03d}.pkl'.format(title, i)), 'wb') as f:
+                cPickle.dump((batch_x, batch_y), f, protocol=cPickle.HIGHEST_PROTOCOL)
+
+    split_batch('train', *genset(samples[0]))
+    split_batch('valid', *genset(samples[1]))
+    split_batch('test', *genset(samples[2]))
 
 
 @cachem.save('model')
-def train_model(dataset):
+def train_model(batch_dir):
     """Train deep model
 
     Args:
@@ -381,7 +389,7 @@ def train_model(dataset):
                           regularize=1e-3)
 
     # Training
-    sgd.train(evaluator, dataset,
+    sgd.train_batch(evaluator, batch_dir,
               learning_rate=1e-4, momentum=0.9,
               batch_size=300, n_epoch=200,
               learning_rate_decr=1.0, patience_incr=1.5)
@@ -390,7 +398,7 @@ def train_model(dataset):
 
 
 @cachem.save('result')
-def compute_result(model, dataset, images, samples):
+def compute_result(model, batch_dir, images, samples):
     """Compute output for dataset
 
     Args:
@@ -410,6 +418,8 @@ def compute_result(model, dataset, images, samples):
 
     if result is not None: return result
 
+    import glob
+    import cPickle
     import theano
     import theano.tensor as T
     from reid.models.layers import CompLayer
@@ -426,20 +436,63 @@ def compute_result(model, dataset, images, samples):
         outputs = [f(X[i:i+1, :]).ravel() for i in xrange(X.shape[0])]
         return numpy.asarray(outputs)
 
+    train_files = glob.glob(os.path.join(batch_dir, 'train_*.pkl'))
+    valid_files = glob.glob(os.path.join(batch_dir, 'valid_*.pkl'))
+    test_files = glob.glob(os.path.join(batch_dir, 'test_*.pkl'))
+
+    train_files.sort()
+    valid_files.sort()
+    test_files.sort()    
+
+    # Setup parameters
+    n_train_batches = len(train_files)
+    n_valid_batches = len(valid_files)
+    n_test_batches = len(test_files)
+
+    for i in xrange(n_train_batches):
+        with open(train_files[i], 'rb') as fid:
+            X, T = cPickle.load(fid)
+            Y = compute_output(X)
+            if i == 0:
+                cum_T = T
+                cum_Y = Y
+            else:
+                cum_T = numpy.vstack((cum_T, T))
+                cum_Y = numpy.vstack((cum_Y, Y))
+
     train = ([images[i] for i, __, __ in samples[0]],
              [images[j] for __, j, __ in samples[0]],
-             compute_output(dataset.train_x.get_value(borrow=True)),
-             dataset.train_y.get_value(borrow=True))
+             cum_Y, cum_T)
+
+    for i in xrange(n_valid_batches):
+        with open(valid_files[i], 'rb') as fid:
+            X, T = cPickle.load(fid)
+            Y = compute_output(X)
+            if i == 0:
+                cum_T = T
+                cum_Y = Y
+            else:
+                cum_T = numpy.vstack((cum_T, T))
+                cum_Y = numpy.vstack((cum_Y, Y))
 
     valid = ([images[i] for i, __, __ in samples[1]],
              [images[j] for __, j, __ in samples[1]],
-             compute_output(dataset.valid_x.get_value(borrow=True)),
-             dataset.valid_y.get_value(borrow=True))
+             cum_Y, cum_T)
+
+    for i in xrange(n_test_batches):
+        with open(valid_files[i], 'rb') as fid:
+            X, T = cPickle.load(fid)
+            Y = compute_output(X)
+            if i == 0:
+                cum_T = T
+                cum_Y = Y
+            else:
+                cum_T = numpy.vstack((cum_T, T))
+                cum_Y = numpy.vstack((cum_Y, Y))
 
     test = ([images[i] for i, __, __ in samples[2]],
             [images[j] for __, j, __ in samples[2]],
-            compute_output(dataset.test_x.get_value(borrow=True)),
-            dataset.test_y.get_value(borrow=True))
+            cum_Y, cum_T)
 
     return (train, valid, test)
 
@@ -565,11 +618,11 @@ def show_cmc(model, X, indices, samples):
 
     f = theano.function(inputs=[x], outputs=y)
 
-    test_pids = samples[-1]
+    train_pids = samples[3]
 
     gX, gY, pX, pY = [], [], [], []
     for i, (pid, vid) in enumerate(indices):
-        if pid not in test_pids: continue
+        if pid in train_pids: continue
         if vid == 0:
             gX.append(i)
             gY.append(pid)
@@ -820,12 +873,16 @@ if __name__ == '__main__':
     data, indices = load_data(attrconf.datasets)
     data = decompose(data)
     X, A = preprocess(data)
-    s = sample(indices, pos_downsample=0.3, neg_pos_ratio=2.0)
-    dataset = create_dataset(X, A, s)
+    s = sample(indices, pos_downsample=1.0, neg_pos_ratio=2.0)
 
-    model = train_model(dataset)
+    batch_dir = '../cache/run0'
+    if not os.path.isdir(batch_dir): os.makedirs(batch_dir)
 
-    result = compute_result(model, dataset, [p for p, __, __ in data], s)
+    create_dataset(X, A, s, batch_dir)
+
+    model = train_model(batch_dir)
+
+    result = compute_result(model, batch_dir, [p for p, __, __ in data], s)
     show_stats(result)
     print show_cmc(model, X, indices, s)
 
