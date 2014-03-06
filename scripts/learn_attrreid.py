@@ -238,6 +238,7 @@ def create_dataset(X, A, samples, batch_dir):
     print "Creating dataset ..."
 
     if os.path.isdir(batch_dir): return
+    os.makedirs(batch_dir)
 
     import cPickle
 
@@ -876,7 +877,6 @@ if __name__ == '__main__':
     s = sample(indices, pos_downsample=1.0, neg_pos_ratio=2.0)
 
     batch_dir = '../cache/run0'
-    if not os.path.isdir(batch_dir): os.makedirs(batch_dir)
 
     create_dataset(X, A, s, batch_dir)
 
