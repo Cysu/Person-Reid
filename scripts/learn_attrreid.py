@@ -32,6 +32,8 @@ def load_data(datasets):
 
     data, indices = [], []
 
+    cumpid = 0
+
     for dname in datasets:
         matfp = os.path.join('..', 'data', 'attrreid', dname + '_parse.mat')
         matdata = loadmat(matfp)
@@ -45,7 +47,8 @@ def load_data(datasets):
                     bpmap = matdata['bodyparts'][pid, vid][0, k]
                     attr = matdata['attributes'][pid, vid][0, k].ravel()
                     data.append((img, bpmap, attr))
-                    indices.append((pid, vid))
+                    indices.append((cumpid + pid, vid))
+        cumpid += m
 
     return (data, indices)
 
@@ -154,7 +157,7 @@ def preprocess(decdata):
 
 
 @cachem.save('sample')
-def sample(indices, neg_pos_ratio=1.0):
+def sample(indices, pos_downsample=1.0, neg_pos_ratio=1.0):
     """Sample positive and negative data
 
     Args:
@@ -162,7 +165,7 @@ def sample(indices, neg_pos_ratio=1.0):
         neg_pos_ratio: #neg / #pos
 
     Returns:
-        The sampled data indices. [(i, j, 0/1)].
+        The sampled data indices. (train, vaid, test) each is [(i, j, 0/1)].
     """
 
     print "Sampling ..."
@@ -171,41 +174,63 @@ def sample(indices, neg_pos_ratio=1.0):
 
     if data is not None: return data
 
+    import random
     from reid.utils.math_utils import numpy_rng
 
-    samples = []
+    n_imgs = len(indices)
 
-    m = len(indices)
+    def gensamples(pids):
+        samples = []
 
-    # Positives
-    for i in xrange(m):
-        j = i + 1
-        while j < m and indices[i][0] == indices[j][0]:
-            if indices[i][1] != indices[j][1]:
-                samples.append((i, j, True))
-            j += 1
+        # Positive samples
+        for i in xrange(n_imgs):
+            if indices[i][0] not in pids: continue
+            j = i + 1
+            while j < n_imgs and indices[i][0] == indices[j][0]:
+                if numpy_rng.rand() < pos_downsample:
+                    samples.append((i, j, True))
+                j += 1
 
-    # Negatives
-    n = int(len(samples) * neg_pos_ratio)
+        # Negative samples
+        n = int(len(samples) * neg_pos_ratio)
+        for k in xrange(n):
+            while True:
+                i, j = numpy_rng.randint(0, n_imgs, 2)
+                if indices[i][0] in pids and indices[j][0] in pids and \
+                        indices[i][0] != indices[j][0] and \
+                        (i,j,False) not in samples and (j,i,False) not in samples:
+                    samples.append((i, j, False))
+                    break
 
-    for k in xrange(n):
-        while True:
-            i, j = numpy_rng.randint(0, m, 2)
-            if indices[i][0] != indices[j][0]:
-                samples.append((i, j, False))
-                break
+        random.shuffle(samples)
+        return samples
 
-    return samples
+    # Split by pid
+    m = indices[-1][0] + 1
+    m_train = int(m * 0.7)
+    m_valid = int(m * 0.2)
+
+    p = numpy_rng.permutation(m)
+
+    train_pids = p[0 : m_train]
+    valid_pids = p[m_train : m_train+m_valid]
+    test_pids = p[m_train+m_valid : ]
+
+    train = gensamples(train_pids)
+    valid = gensamples(valid_pids)
+    test = gensamples(test_pids)
+
+    return (train, valid, test, train_pids, valid_pids, test_pids)
 
 
 @cachem.save('dataset')
-def create_dataset(X, A, s):
+def create_dataset(X, A, samples):
     """Create dataset for model training, validation and testing
 
     Args:
         X: m×d_X matrix
         A: m×d_A matrix
-        s: [(i, j, 0/1)]
+        samples: (train, vaid, test) each is [(i, j, 0/1)]
 
     Returns:
         Dataset X = X1_X2, Y = A1_A2_(0/1)
@@ -219,17 +244,19 @@ def create_dataset(X, A, s):
 
     from reid.utils.dataset import Dataset
 
-    I = numpy.asarray([i for i, __, __ in s])
-    J = numpy.asarray([j for __, j, __ in s])
-    L = numpy.asarray([l for __, __, l in s]).astype(numpy.float32)
+    def genset(s):
+        I = numpy.asarray([i for i, __, __ in s])
+        J = numpy.asarray([j for __, j, __ in s])
+        L = numpy.asarray([l for __, __, l in s]).astype(numpy.float32)
 
-    X = numpy.hstack((X[I], X[J]))
-    Y = numpy.hstack((A[I], A[J], L.reshape(L.shape[0], 1)))
+        x = numpy.hstack((X[I], X[J]))
+        y = numpy.hstack((A[I], A[J], L.reshape(L.shape[0], 1)))
 
-    dataset = Dataset(X, Y)
-    dataset.split(0.7, 0.2)
+        return (x, y)
 
-    return dataset
+    return Dataset(train_set=genset(samples[0]),
+                   valid_set=genset(samples[1]),
+                   test_set=genset(samples[2]))
 
 
 @cachem.save('model')
@@ -312,13 +339,18 @@ def train_model(dataset):
         ]),
         CompLayer(),
         FullConnLayer(104+104+256, 256, af.tanh),
-        FullConnLayer(256, 1, af.sigmoid)
+        FullConnLayer(256, 2, af.softmax)
     ])
 
     # Evaluator
     def reid_cost(output, target):
+        k = sum(target_sizes)
+        return k * cf.mean_negative_loglikelihood(output, target)
+
+    def reid_error(output, target):
         k = (len(attrconf.unival) + len(attrconf.multival))
-        return k * cf.mean_binary_cross_entropy(output, target)
+        return k * cf.mean_negative_loglikelihood(output, target)
+
 
     cost_func = [
         [cf.mean_negative_loglikelihood] * len(attrconf.unival) + \
@@ -332,7 +364,7 @@ def train_model(dataset):
             [cf.mean_zeroone_error_rate] * len(attrconf.multival),
         [cf.mean_number_misclassified] * len(attrconf.unival) + \
             [cf.mean_zeroone_error_rate] * len(attrconf.multival),
-        reid_cost
+        reid_error
     ]
 
     def target_adapter():
@@ -358,14 +390,14 @@ def train_model(dataset):
 
 
 @cachem.save('result')
-def compute_result(model, dataset, images, s):
+def compute_result(model, dataset, images, samples):
     """Compute output for dataset
 
     Args:
         model: Deep model
         dataset: Dataset X = X1_X2, Y = A1_A2_(0/1)
         images: [img]
-        s: [(i, j, 0/1)]
+        samples: (train, vaid, test) each is [(i, j, 0/1)]
 
     Returns:
         (train, valid, test) where each is
@@ -386,7 +418,7 @@ def compute_result(model, dataset, images, s):
     y, thr = model.get_output(x)
     thr.append(y)
     comp = CompLayer()
-    y, __ = comp.get_output(thr)
+    y, thr = comp.get_output(thr)
 
     f = theano.function(inputs=[x], outputs=y)
 
@@ -394,24 +426,22 @@ def compute_result(model, dataset, images, s):
         outputs = [f(X[i:i+1, :]).ravel() for i in xrange(X.shape[0])]
         return numpy.asarray(outputs)
 
-    train = ([images[s[i][0]] for i in dataset.train_ind],
-             [images[s[i][1]] for i in dataset.train_ind],
+    train = ([images[i] for i, __, __ in samples[0]],
+             [images[j] for __, j, __ in samples[0]],
              compute_output(dataset.train_x.get_value(borrow=True)),
              dataset.train_y.get_value(borrow=True))
 
-    valid = ([images[s[i][0]] for i in dataset.valid_ind],
-             [images[s[i][1]] for i in dataset.valid_ind],
+    valid = ([images[i] for i, __, __ in samples[1]],
+             [images[j] for __, j, __ in samples[1]],
              compute_output(dataset.valid_x.get_value(borrow=True)),
              dataset.valid_y.get_value(borrow=True))
 
-    test = ([images[s[i][0]] for i in dataset.test_ind],
-            [images[s[i][1]] for i in dataset.test_ind],
+    test = ([images[i] for i, __, __ in samples[2]],
+            [images[j] for __, j, __ in samples[2]],
             compute_output(dataset.test_x.get_value(borrow=True)),
             dataset.test_y.get_value(borrow=True))
 
-    result = (train, valid, test)
-
-    return result
+    return (train, valid, test)
 
 
 def show_stats(result):
@@ -490,7 +520,7 @@ def show_stats(result):
             for j, attrname in enumerate(grp):
                 t1j, p1j = t1[:, j], p1[:, j]
                 t2j, p2j = t2[:, j], p2[:, j]
-                freqs[j] = ((t1j == 1).mean() + (t2j == 1).mean())
+                freqs[j] = ((t1j == 1).mean() + (t2j == 1).mean()) / 2.0
                 tprs[j] = (((t1j == 1) & (p1j == 1)).sum() + ((t2j == 1) & (p2j == 1)).sum()) * 1.0 / \
                           ((t1j == 1).sum() + (t2j == 1).sum())
                 fprs[j] = (((t1j == 0) & (p1j == 1)).sum() + ((t2j == 0) & (p2j == 1)).sum()) * 1.0 / \
@@ -515,7 +545,7 @@ def show_stats(result):
 
 
 @cachem.save('cmc')
-def show_cmc(model, X, indices):
+def show_cmc(model, X, indices, samples):
     print "Computing cmc ..."
 
     result = cachem.load('cmc')
@@ -531,12 +561,15 @@ def show_cmc(model, X, indices):
     y, thr = model.get_output(x)
     thr.append(y)
     comp = CompLayer()
-    y, __ = comp.get_output(thr)
+    y, thr = comp.get_output(thr)
 
     f = theano.function(inputs=[x], outputs=y)
 
+    test_pids = samples[-1]
+
     gX, gY, pX, pY = [], [], [], []
     for i, (pid, vid) in enumerate(indices):
+        if pid not in test_pids: continue
         if vid == 0:
             gX.append(i)
             gY.append(pid)
@@ -548,9 +581,8 @@ def show_cmc(model, X, indices):
         y = f(numpy.hstack((X[gX[i]:gX[i]+1, :], X[pX[j]:pX[j]+1, :]))).ravel()
         return -y[-1]
 
-    result = cmc.count(compute_distance, gY, pY, 100)
+    return cmc.count_lazy(compute_distance, gY, pY, 100, 10)
 
-    return result
 
 def show_result(result):
     """Show the result in GUI
@@ -788,13 +820,13 @@ if __name__ == '__main__':
     data, indices = load_data(attrconf.datasets)
     data = decompose(data)
     X, A = preprocess(data)
-    s = sample(indices, neg_pos_ratio=1.0)
+    s = sample(indices, pos_downsample=0.5, neg_pos_ratio=2.0)
     dataset = create_dataset(X, A, s)
 
     model = train_model(dataset)
 
     result = compute_result(model, dataset, [p for p, __, __ in data], s)
     show_stats(result)
-    print show_cmc(model, X, indices)
+    print show_cmc(model, X, indices, s)
 
     show_result(result)
