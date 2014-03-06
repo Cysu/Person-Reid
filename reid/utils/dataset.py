@@ -32,8 +32,8 @@ class Dataset(object):
             self.X = X
             self.Y = Y
         elif train_set is not None and valid_set is not None and test_set is not None:
-            self.X = numpy.vstack((train_set[0], valid_set[0], test_set[0]))
-            self.Y = numpy.vstack((train_set[1], valid_set[1], test_set[1]))
+            # self.X = numpy.vstack((train_set[0], valid_set[0], test_set[0]))
+            # self.Y = numpy.vstack((train_set[1], valid_set[1], test_set[1]))
 
             self.train_x = self._create_shared(train_set[0])
             self.train_y = self._create_shared(train_set[1])

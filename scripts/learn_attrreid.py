@@ -820,7 +820,7 @@ if __name__ == '__main__':
     data, indices = load_data(attrconf.datasets)
     data = decompose(data)
     X, A = preprocess(data)
-    s = sample(indices, pos_downsample=0.5, neg_pos_ratio=2.0)
+    s = sample(indices, pos_downsample=0.3, neg_pos_ratio=2.0)
     dataset = create_dataset(X, A, s)
 
     model = train_model(dataset)
