@@ -223,7 +223,7 @@ def sample(indices, pos_downsample=1.0, neg_pos_ratio=1.0):
     return (train, valid, test, train_pids, valid_pids, test_pids)
 
 
-def create_dataset(X, A, samples, batch_dir):
+def create_dataset(X, A, samples, batch_dir, batch_size):
     """Create dataset for model training, validation and testing
 
     Args:
@@ -251,8 +251,6 @@ def create_dataset(X, A, samples, batch_dir):
         y = numpy.hstack((A[I], A[J], L.reshape(L.shape[0], 1)))
 
         return (x, y)
-
-    batch_size = 300
 
     def split_batch(title, x, y):
         m = x.shape[0]
@@ -300,8 +298,8 @@ def train_model(batch_dir):
     def feature_extraction():
         decomp = DecompLayer([(3,80,30)] * len(bodyconf.groups))
         column = MultiwayNeuralNet([NeuralNet([
-            ConvPoolLayer((64,3,3,3), (2,2), (3,80,30), af.tanh, False),
-            ConvPoolLayer((64,64,3,3), (2,2), None, af.tanh, True)
+            ConvPoolLayer((64,3,3,3), (2,2), (3,80,30), af.rectifier, False),
+            ConvPoolLayer((64,64,3,3), (2,2), None, af.rectifier, True)
         ]) for __ in xrange(len(bodyconf.groups))])
         comp = CompLayer(strategy='Maxout')
         return NeuralNet([decomp, column, comp])
@@ -315,8 +313,8 @@ def train_model(batch_dir):
 
     # Attribute classification module
     def attribute_classification():
-        fcl_1 = FullConnLayer(6912, 1024, af.tanh)
-        fcl_2 = FullConnLayer(1024, 104)
+        fcl_1 = FullConnLayer(6912, 2048, af.rectifier)
+        fcl_2 = FullConnLayer(2048, 104)
         decomp = DecompLayer(
             [(sz,) for sz in output_sizes],
             [af.softmax] * len(attrconf.unival) + \
@@ -334,11 +332,12 @@ def train_model(batch_dir):
     # Person re-identification module
     def person_reidentification():
         fp = FilterParingLayer((64,18,6), 4, (2,2), True)
-        fcl_1 = FullConnLayer(2592, 256, af.tanh)
+        fcl_1 = FullConnLayer(2592, 256, af.rectifier)
         return NeuralNet([fp, fcl_1])
 
     reid_module = person_reidentification()
 
+    # Combine them together
     model = NeuralNet([
         feat_module,
         CloneLayer(2),
@@ -347,19 +346,24 @@ def train_model(batch_dir):
             reid_module
         ]),
         CompLayer(),
-        FullConnLayer(104+104+256, 256, af.tanh),
+        FullConnLayer(104+104+256, 256, af.rectifier),
         FullConnLayer(256, 2, af.softmax)
     ])
 
-    # Evaluator
+    # Fine-tuning
     def reid_cost(output, target):
-        k = sum(target_sizes)
-        return k * cf.mean_negative_loglikelihood(output, target)
+        return 6.0 * cf.mean_negative_loglikelihood(output, target)
 
     def reid_error(output, target):
-        k = (len(attrconf.unival) + len(attrconf.multival))
-        return k * cf.mean_negative_loglikelihood(output, target)
+        return 6.0 * cf.mean_negative_loglikelihood(output, target)
 
+    def target_adapter():
+        d1 = DecompLayer([(sum(target_sizes),), (sum(target_sizes),), (1,)])
+        d2 = DecompLayer([(sz,) for sz in target_sizes])
+        return NeuralNet([
+            d1,
+            MultiwayNeuralNet([d2, d2, IdentityLayer()])
+        ])
 
     cost_func = [
         [cf.mean_negative_loglikelihood] * len(attrconf.unival) + \
@@ -376,23 +380,12 @@ def train_model(batch_dir):
         reid_error
     ]
 
-    def target_adapter():
-        d1 = DecompLayer([(sum(target_sizes),), (sum(target_sizes),), (1,)])
-        d2 = DecompLayer([(sz,) for sz in target_sizes])
-        return NeuralNet([
-            d1,
-            MultiwayNeuralNet([d2, d2, IdentityLayer()])
-        ])
-
-    adapter = target_adapter()
-
-    evaluator = Evaluator(model, cost_func, error_func, adapter,
+    evaluator = Evaluator(model, cost_func, error_func, target_adapter(),
                           regularize=1e-3)
 
-    # Training
     sgd.train_batch(evaluator, batch_dir,
               learning_rate=1e-4, momentum=0.9,
-              batch_size=300, n_epoch=200,
+              batch_size=300, n_epoch=100,
               learning_rate_decr=1.0, patience_incr=1.5)
 
     return model
@@ -517,13 +510,20 @@ def show_stats(result):
     output_offset = sum(output_sizes)
     target_offset = sum(target_sizes)
 
+    def trim(attrname):
+        prefix = ['gender', 'age', 'race', 'accessory', 'carrying', 'upperBody', 'lowerBody', 'hair']
+        for p in prefix:
+            if attrname.startswith(p):
+                return attrname[len(p):]
+        return attrname
+
     def print_stats(title, outputs, targets):
         print "Statistics of {0}".format(title)
         print "=" * 80
 
         for i, (grptitle, grp) in \
                 enumerate(zip(attrconf.unival_titles, attrconf.unival)):
-            print "{0}, frequency, accuracy".format(grptitle)
+            print "{0},Frequency,Accuracy".format(grptitle)
 
             o1 = outputs[:, output_seg[i]:output_seg[i+1]]
             t1 = targets[:, target_seg[i]:target_seg[i+1]]
@@ -539,17 +539,17 @@ def show_stats(result):
                 accs[j] = (((t1 == j) & (p1 == j)).sum() + ((t2 == j) & (p2 == j)).sum()) * 1.0 / \
                           ((t1 == j).sum() + (t2 == j).sum())
                 if numpy.isnan(accs[j]): accs[j] = 0
-                print "{0},{1},{2}".format(attrname, freqs[j], accs[j])
+                print "{0},{1},{2}".format(trim(attrname), freqs[j], accs[j])
 
             freqs = numpy.asarray(freqs)
             accs = numpy.asarray(accs)
 
-            print "Overall accuracy = {0}".format((freqs * accs).sum())
+            print "Overall,1.0,{0}".format((freqs * accs).sum())
             print ""
 
         for i, (grptitle, grp) in \
                 enumerate(zip(attrconf.multival_titles, attrconf.multival)):
-            print "{0}, frequency, TPR, FPR".format(grptitle)
+            print "{0},Frequency,TPR,FPR".format(grptitle)
 
             offset = len(attrconf.unival)
 
@@ -581,13 +581,13 @@ def show_stats(result):
                           ((t1j == 0).sum() + (t2j == 0).sum())
                 if numpy.isnan(tprs[j]): tprs[j] = 0
                 if numpy.isnan(fprs[j]): fprs[j] = 0
-                print "{0},{1},{2},{3}".format(attrname, freqs[j], tprs[j], fprs[j])
+                print "{0},{1},{2},{3}".format(trim(attrname), freqs[j], tprs[j], fprs[j])
 
             freqs = numpy.asarray(freqs)
             tprs = numpy.asarray(tprs)
             fprs = numpy.asarray(fprs)
 
-            print "Overal TPR = {0}, FPR = {1}".format(
+            print "Overal,1.0,{0},{1}".format(
                 (freqs * tprs).sum() / freqs.sum(),
                 (freqs * fprs).sum() / freqs.sum()
             )
@@ -635,7 +635,7 @@ def show_cmc(model, X, indices, samples):
         y = f(numpy.hstack((X[gX[i]:gX[i]+1, :], X[pX[j]:pX[j]+1, :]))).ravel()
         return -y[-1]
 
-    return cmc.count_lazy(compute_distance, gY, pY, 100, 10)
+    return cmc.count_lazy(compute_distance, gY, pY, 100, 1)
 
 
 def show_result(result):
@@ -874,11 +874,11 @@ if __name__ == '__main__':
     data, indices = load_data(attrconf.datasets)
     data = decompose(data)
     X, A = preprocess(data)
-    s = sample(indices, pos_downsample=1.0, neg_pos_ratio=2.0)
+    s = sample(indices, pos_downsample=0.3, neg_pos_ratio=2.0)
 
     batch_dir = '../cache/run0'
 
-    create_dataset(X, A, s, batch_dir)
+    create_dataset(X, A, s, batch_dir, batch_size = 300)
 
     model = train_model(batch_dir)
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # datasets = ['CUHK', 'CUHKL', 'CUHKD', 'GRID', 'PRID', 'VIPeR', '3DPeS', 'SARC3D']
-datasets = ['3DPeS', 'SARC3D', 'CUHK_01', 'CUHK_02', 'CUHK_03', 'CUHK_04']
+datasets = ['3DPeS', 'SARC3D', 'CUHK_01', 'CUHK_02', 'CUHK_03', 'CUHK_04', 'CUHK_05', 'CUHK_07']
 
 names = [
     'genderFemale',

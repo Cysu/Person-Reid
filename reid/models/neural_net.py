@@ -111,14 +111,14 @@ class MultiwayNeuralNet(NeuralNet):
     neural network and thus forms the list of output data.
     """
 
-    def __init__(self, blocks, through=False):
+    def __init__(self, blocks, through=False, const_params=None):
         """Initialize the multiway neural network
 
         Args:
             blocks: A list of parallel typical neural networks
         """
 
-        super(MultiwayNeuralNet, self).__init__(blocks, through)
+        super(MultiwayNeuralNet, self).__init__(blocks, through, const_params)
 
     def get_output(self, x):
         """Get the list of output data
