@@ -8,6 +8,7 @@ import numpy
 import attrconf
 from scipy.io import loadmat, savemat
 from PySide import QtGui, QtCore
+from reid.preproc import imageproc
 from reid.utils.gui_utils import ndarray2qimage
 
 
@@ -277,7 +278,8 @@ class LabellingWindow(QtGui.QMainWindow):
         for v in xrange(self.mat_images.shape[1]):
             if self.mat_images[pid, v].size == 0: break
             for k in xrange(self.mat_images[pid, v].shape[1]):
-                img = ndarray2qimage(self.mat_images[pid, v][0, k])
+                img = self.mat_images[pid, v][0, k]
+                img = ndarray2qimage(imageproc.imresize(img, (256, 96)))
                 item = QtGui.QListWidgetItem(
                     QtGui.QIcon(QtGui.QPixmap.fromImage(img)),
                     '{0},{1}'.format(v, k))

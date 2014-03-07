@@ -298,8 +298,8 @@ def train_model(batch_dir):
     def feature_extraction():
         decomp = DecompLayer([(3,80,30)] * len(bodyconf.groups))
         column = MultiwayNeuralNet([NeuralNet([
-            ConvPoolLayer((64,3,3,3), (2,2), (3,80,30), af.rectifier, False),
-            ConvPoolLayer((64,64,3,3), (2,2), None, af.rectifier, True)
+            ConvPoolLayer((64,3,3,3), (2,2), (3,80,30), af.tanh, False),
+            ConvPoolLayer((64,64,3,3), (2,2), None, af.tanh, True)
         ]) for __ in xrange(len(bodyconf.groups))])
         comp = CompLayer(strategy='Maxout')
         return NeuralNet([decomp, column, comp])
@@ -313,7 +313,7 @@ def train_model(batch_dir):
 
     # Attribute classification module
     def attribute_classification():
-        fcl_1 = FullConnLayer(6912, 2048, af.rectifier)
+        fcl_1 = FullConnLayer(6912, 2048, af.tanh)
         fcl_2 = FullConnLayer(2048, 104)
         decomp = DecompLayer(
             [(sz,) for sz in output_sizes],
@@ -332,7 +332,7 @@ def train_model(batch_dir):
     # Person re-identification module
     def person_reidentification():
         fp = FilterParingLayer((64,18,6), 4, (2,2), True)
-        fcl_1 = FullConnLayer(2592, 256, af.rectifier)
+        fcl_1 = FullConnLayer(2592, 256, af.tanh)
         return NeuralNet([fp, fcl_1])
 
     reid_module = person_reidentification()
@@ -346,7 +346,7 @@ def train_model(batch_dir):
             reid_module
         ]),
         CompLayer(),
-        FullConnLayer(104+104+256, 256, af.rectifier),
+        FullConnLayer(104+104+256, 256, af.tanh),
         FullConnLayer(256, 2, af.softmax)
     ])
 
@@ -474,7 +474,7 @@ def compute_result(model, batch_dir, images, samples):
              cum_Y, cum_T)
 
     for i in xrange(n_test_batches):
-        with open(valid_files[i], 'rb') as fid:
+        with open(test_files[i], 'rb') as fid:
             X, T = cPickle.load(fid)
             Y = compute_output(X)
             if i == 0:
