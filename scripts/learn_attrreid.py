@@ -133,9 +133,9 @@ def preprocess(decdata):
     from skimage.color import rgb2lab
     from reid.preproc import imageproc
 
-    def imgprep(img, mean_luminance):
+    def imgprep(img):
         img = imageproc.imresize(img, (80, 30))
-        img = imageproc.subtract_luminance(img, mean_luminance)
+        img = rgb2lab(img)[:,:,1:]
         img = numpy.rollaxis(img, 2)
         return img
 
@@ -143,8 +143,7 @@ def preprocess(decdata):
     X, A = [0] * m, [0] * m
 
     for i, (img, parts, attrs) in enumerate(decdata):
-        mean_luminance = rgb2lab(img)[:,:,0].mean()
-        X[i] = [imgprep(part, mean_luminance) for part in parts]
+        X[i] = [imgprep(part) for part in parts]
         X[i] = numpy.asarray(X[i], dtype=numpy.float32).ravel()
         A[i] = numpy.concatenate(attrs).astype(numpy.float32)
 
@@ -296,25 +295,25 @@ def train_model(batch_dir):
 
     # Feature extraction module
     def feature_extraction():
-        decomp = DecompLayer([(3,80,30)] * len(bodyconf.groups))
+        decomp = DecompLayer([(2,80,30)] * len(bodyconf.groups))
         column = MultiwayNeuralNet([NeuralNet([
-            ConvPoolLayer((64,3,3,3), (2,2), (3,80,30), af.tanh, False),
-            ConvPoolLayer((64,64,3,3), (2,2), None, af.tanh, True)
+            ConvPoolLayer((64,2,5,5), (2,2), (2,80,30), af.tanh, False),
+            ConvPoolLayer((64,64,5,5), (2,2), None, af.tanh, True)
         ]) for __ in xrange(len(bodyconf.groups))])
         comp = CompLayer(strategy='Maxout')
         return NeuralNet([decomp, column, comp])
 
     fe = feature_extraction()
     feat_module = NeuralNet([
-        DecompLayer([(3*80*30*len(bodyconf.groups),)] * 2),
+        DecompLayer([(2*80*30*len(bodyconf.groups),)] * 2),
         MultiwayNeuralNet([fe, fe]),
         CompLayer()
     ])
 
     # Attribute classification module
     def attribute_classification():
-        fcl_1 = FullConnLayer(6912, 2048, af.tanh)
-        fcl_2 = FullConnLayer(2048, 104)
+        fcl_1 = FullConnLayer(4352, 1024, af.tanh)
+        fcl_2 = FullConnLayer(1024, 104)
         decomp = DecompLayer(
             [(sz,) for sz in output_sizes],
             [af.softmax] * len(attrconf.unival) + \
@@ -324,15 +323,15 @@ def train_model(batch_dir):
 
     ac = NeuralNet([attribute_classification(), CompLayer()])
     attr_module = NeuralNet([
-        DecompLayer([(6912,)] * 2),
+        DecompLayer([(4352,)] * 2),
         MultiwayNeuralNet([ac, ac]),
         CompLayer()
     ])
 
     # Person re-identification module
     def person_reidentification():
-        fp = FilterParingLayer((64,18,6), 4, (2,2), True)
-        fcl_1 = FullConnLayer(2592, 256, af.tanh)
+        fp = FilterParingLayer((64,17,4), 4, (2,2), True)
+        fcl_1 = FullConnLayer(1088, 256, af.tanh)
         return NeuralNet([fp, fcl_1])
 
     reid_module = person_reidentification()
